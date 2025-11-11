@@ -1,0 +1,21 @@
+[project]
+name = "agentco"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "Juan Carlos Aguirre Arango", email = "carlos.aguirre@rappi.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "loguru>=0.7.3",
+    "pydantic>=2.12.4",
+    "typer>=0.20.0",
+]
+
+[project.scripts]
+agentco = "agentco:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
