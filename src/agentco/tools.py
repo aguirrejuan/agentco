@@ -6,8 +6,9 @@ from google.adk.agents.readonly_context import ReadonlyContext
 from google.adk.tools import FunctionTool
 from google.adk.tools.base_toolset import BaseToolset
 
-from agentco import DataSourceAnalyzer
 from agentco.logger import logger
+
+from .data.data_converter import DataSourceAnalyzer
 
 
 class DataSourceToolset(BaseToolset):
