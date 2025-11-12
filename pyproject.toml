@@ -4,17 +4,26 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 authors = [
-    { name = "Juan Carlos Aguirre Arango", email = "carlos.aguirre@rappi.com" }
+    { name = "Juan Carlos Aguirre Arango", email = "jucaguirrear@unal.edu.co" }
 ]
 requires-python = ">=3.12"
 dependencies = [
+    "duckdb>=1.4.1",
+    "google-adk>=1.18.0",
+    "ipykernel>=7.1.0",
+    "langfuse>=3.9.2",
+    "litellm>=1.79.3",
     "loguru>=0.7.3",
+    "openinference-instrumentation-google-adk>=0.1.6",
+    "pandas>=2.0.0",
     "pydantic>=2.12.4",
+    "python-dotenv>=1.2.1",
+    "tabulate>=0.9.0",
     "typer>=0.20.0",
 ]
 
 [project.scripts]
-agentco = "agentco:main"
+agentco = "agentco.cli:app"
 
 [build-system]
 requires = ["hatchling"]
