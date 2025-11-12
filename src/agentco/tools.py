@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List
+from typing import Dict, List
 
 import duckdb
 from google.adk.agents.readonly_context import ReadonlyContext
@@ -11,6 +11,55 @@ from agentco.logger import logger
 
 
 class DataSourceToolset(BaseToolset):
+    """Toolset that loads and analyzes data source files with singleton pattern for same arguments."""
+
+    # Class-level cache to store instances by their arguments
+    _instances: Dict[tuple, "DataSourceToolset"] = {}
+
+    def __new__(
+        cls,
+        source_id: str,
+        day_folder: Path,
+        datasource_folder: Path,
+        prefix: str = "data_",
+    ):
+        """
+        Implement singleton pattern based on arguments.
+
+        Returns existing instance if one exists with the same arguments,
+        otherwise creates a new instance.
+        """
+        # Create a hashable key from the arguments
+        key = (source_id, str(day_folder), str(datasource_folder), prefix)
+
+        # Check if instance already exists
+        if key in cls._instances:
+            logger.debug(
+                f"🔄 Reusing existing DataSourceToolset for source_id={source_id}"
+            )
+            return cls._instances[key]
+
+        # Create new instance and cache it
+        instance = super().__new__(cls)
+        cls._instances[key] = instance
+        logger.debug(f"🆕 Creating new DataSourceToolset for source_id={source_id}")
+
+        return instance
+
+    @classmethod
+    def clear_cache(cls):
+        """Clear the singleton cache. Useful for testing or cleanup."""
+        cls._instances.clear()
+        logger.debug("🧹 DataSourceToolset cache cleared")
+
+    @classmethod
+    def get_cache_info(cls) -> Dict[str, int]:
+        """Get information about the current cache state."""
+        return {
+            "cached_instances": len(cls._instances),
+            "cached_keys": list(cls._instances.keys()),
+        }
+
     """Toolset that loads and analyzes data source files."""
 
     def __init__(
@@ -29,6 +78,10 @@ class DataSourceToolset(BaseToolset):
             datasource_folder: Path to the datasource CSV folder
             prefix: Prefix for tool names
         """
+        # Skip initialization if already initialized (singleton pattern)
+        if hasattr(self, "_initialized"):
+            return
+
         self.source_id = source_id
         self.day_folder = day_folder
         self.datasource_folder = datasource_folder
@@ -64,12 +117,6 @@ class DataSourceToolset(BaseToolset):
             f"{self.tool_name_prefix}validate_data_quality"
         )
 
-    async def get_tools(self, context: ReadonlyContext) -> List[FunctionTool]:
-        """
-        Load the data when tools are initialized.
-        This is called once when the agent starts.
-        """
-        # Initialize analyzer and load data
         self.analyzer = DataSourceAnalyzer.from_day_folder(
             source_id=self.source_id,
             day_folder=self.day_folder,
@@ -88,11 +135,15 @@ class DataSourceToolset(BaseToolset):
         self.conn_all = duckdb.connect(":memory:")
         self.conn_all.register("data", self.data)
 
-        logger.debug(f"✓ Loaded {len(self.today_data)} files from today")
-        logger.debug(f"✓ Loaded {len(self.data)} total files (today + historical)")
-        logger.debug(
-            f"✓ Data source CV loaded: {len(self.markdown_explanation)} characters"
-        )
+        # Mark as initialized
+        self._initialized = True
+
+    async def get_tools(self, context: ReadonlyContext) -> List[FunctionTool]:
+        """
+        Load the data when tools are initialized.
+        This is called once when the agent starts.
+        """
+        # Initialize analyzer and load data
 
         # Return the tools that will use this loaded data
         return [

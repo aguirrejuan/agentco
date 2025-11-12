@@ -23,7 +23,7 @@ def get_model() -> LiteLlm:
 
 
 def get_tools(source_id: str, day_folder: Path, datasource_folder: Path) -> List[Any]:
-    """Get default tools configuration for agents.
+    """Get default tools configuration for agents with singleton caching.
 
     Parameters
     ----------
@@ -37,12 +37,22 @@ def get_tools(source_id: str, day_folder: Path, datasource_folder: Path) -> List
     Returns
     -------
     List[Any]
-        List of configured tools
+        List of configured tools (reuses existing instances for same arguments)
     """
     data_tools = DataSourceToolset(
         source_id=source_id, day_folder=day_folder, datasource_folder=datasource_folder
     )
     return [data_tools]
+
+
+def clear_tools_cache():
+    """Clear the singleton cache for DataSourceToolset instances."""
+    DataSourceToolset.clear_cache()
+
+
+def get_tools_cache_info() -> dict:
+    """Get information about the current tools cache state."""
+    return DataSourceToolset.get_cache_info()
 
 
 # Common instructions for all agents
