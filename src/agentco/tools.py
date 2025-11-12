@@ -7,6 +7,7 @@ from google.adk.tools import FunctionTool
 from google.adk.tools.base_toolset import BaseToolset
 
 from agentco import DataSourceAnalyzer
+from agentco.logger import logger
 
 
 class DataSourceToolset(BaseToolset):
@@ -87,9 +88,11 @@ class DataSourceToolset(BaseToolset):
         self.conn_all = duckdb.connect(":memory:")
         self.conn_all.register("data", self.data)
 
-        print(f"✓ Loaded {len(self.today_data)} files from today")
-        print(f"✓ Loaded {len(self.data)} total files (today + historical)")
-        print(f"✓ Data source CV loaded: {len(self.markdown_explanation)} characters")
+        logger.debug(f"✓ Loaded {len(self.today_data)} files from today")
+        logger.debug(f"✓ Loaded {len(self.data)} total files (today + historical)")
+        logger.debug(
+            f"✓ Data source CV loaded: {len(self.markdown_explanation)} characters"
+        )
 
         # Return the tools that will use this loaded data
         return [
@@ -280,4 +283,4 @@ Quick Insights:
         self.markdown_explanation = None
         self.analyzer = None
 
-        print("✓ Toolset resources cleaned up")
+        logger.debug("✓ Toolset resources cleaned up")

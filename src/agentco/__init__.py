@@ -1,4 +1,6 @@
 from dotenv import load_dotenv
+from langfuse import get_client
+from openinference.instrumentation.google_adk import GoogleADKInstrumentor
 
 from .cli import app as cli_app
 from .data.data_converter import (
@@ -26,3 +28,15 @@ __all__ = [
 def main() -> None:
     """Entry point for the CLI application."""
     cli_app()
+
+
+langfuse = get_client()
+
+# Verify connection
+if langfuse.auth_check():
+    print("Langfuse client is authenticated and ready!")
+else:
+    print("Authentication failed. Please check your credentials and host.")
+
+
+GoogleADKInstrumentor().instrument()

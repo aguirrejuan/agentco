@@ -1,7 +1,8 @@
-"""Detector Agent Factory
+"""Multi-Source Data Quality Processing Factory
 
-This module provides factory functions for creating configured detector agent instances,
-including multi-source processing capabilities following ADK best practices.
+This module provides factory functions for creating multi-source data quality monitoring pipelines.
+Each source is processed independently with its own set of detectors, and results are synthesized
+into a comprehensive report.
 """
 
 from pathlib import Path
@@ -10,84 +11,15 @@ from typing import Any, Dict, List
 from google.adk.agents import LlmAgent, ParallelAgent, SequentialAgent
 
 from ..logger import logger
-from .commons import get_model, get_tools
-from .detectors import (
-    create_duplicated_and_failed_file_detector_agent,
-    create_file_upload_after_schedule_detector_agent,
-    create_missing_file_detector_agent,
-    create_unexpected_empty_file_detector_agent,
-    create_unexpected_volume_variation_detector_agent,
-    create_upload_of_previous_file_detector_agent,
-)
-
-
-def create_all_detector_agents(
-    source_id: str, day_folder: Path, datasource_folder: Path
-) -> List[LlmAgent]:
-    """Create all detector agents with custom configuration.
-
-    Parameters
-    ----------
-    source_id : str
-        The source identifier for the data source toolset
-    day_folder : Path
-        Path to the day folder containing data files
-    datasource_folder : Path
-        Path to the datasource folder containing CV files
-
-    Returns
-    -------
-    List[LlmAgent]
-        List of all configured detector agents
-    """
-    # Configure tools with custom parameters
-    tools = get_tools(source_id, day_folder, datasource_folder)
-
-    # Create all detector agents with the configured tools
-    agents = [
-        create_missing_file_detector_agent(tools),
-        create_duplicated_and_failed_file_detector_agent(tools),
-        create_unexpected_empty_file_detector_agent(tools),
-        create_unexpected_volume_variation_detector_agent(tools),
-        create_file_upload_after_schedule_detector_agent(tools),
-        create_upload_of_previous_file_detector_agent(tools),
-    ]
-
-    return agents
-
-
-def create_parallel_detection_agent(
-    source_id: str, day_folder: Path, datasource_folder: Path
-) -> ParallelAgent:
-    """Create a parallel agent that runs all detectors concurrently.
-
-    Parameters
-    ----------
-    source_id : str,
-        The source identifier for the data source toolset
-    day_folder : Path,
-        Path to the day folder containing data files
-    datasource_folder : Path
-        Path to the datasource folder containing CV files
-
-    Returns
-    -------
-    ParallelAgent
-        Parallel agent configured with all detector sub-agents
-    """
-    detector_agents = create_all_detector_agents(
-        source_id, day_folder, datasource_folder
-    )
-
-    return ParallelAgent(
-        name="ParallelDetectionTeam",
-        sub_agents=detector_agents,
-        description="Runs multiple detection agents in parallel to identify various data quality issues.",
-    )
+from .commons import get_model
+from .factory import create_all_detector_agents
 
 
 def create_source_specific_detection_agent(
-    source_id: str, day_folder: Path, datasource_folder: Path, source_name: str = ""
+    source_id: str,
+    day_folder: Path,
+    datasource_folder: Path,
+    agent_name_suffix: str = "",
 ) -> ParallelAgent:
     """Create a parallel detection agent for a specific source.
 
@@ -99,42 +31,27 @@ def create_source_specific_detection_agent(
         Path to the day folder containing data files
     datasource_folder : Path
         Path to the datasource folder containing CV files
-    source_name : str, optional
-        Human-readable name for the source (for identification)
+    agent_name_suffix : str, optional
+        Suffix to add to agent name for identification
 
     Returns
     -------
     ParallelAgent
         Parallel agent configured with all detector sub-agents for this source
     """
-
-    def sanitize_agent_name(name: str) -> str:
-        """Sanitize name for use in agent identifiers."""
-        # Replace spaces and special characters with underscores
-        import re
-
-        sanitized = re.sub(r"[^a-zA-Z0-9_]", "_", name)
-        # Remove multiple consecutive underscores
-        sanitized = re.sub(r"_+", "_", sanitized)
-        # Remove leading/trailing underscores
-        sanitized = sanitized.strip("_")
-        return sanitized
-
     # Create detector agents for this specific source
     detector_agents = create_all_detector_agents(
         source_id=source_id, day_folder=day_folder, datasource_folder=datasource_folder
     )
 
     agent_name = f"SourceDetectionTeam_{source_id}"
-    if source_name:
-        sanitized_name = sanitize_agent_name(source_name)
-        if sanitized_name:
-            agent_name += f"_{sanitized_name}"
+    if agent_name_suffix:
+        agent_name += f"_{agent_name_suffix}"
 
     return ParallelAgent(
         name=agent_name,
         sub_agents=detector_agents,
-        description=f"Parallel detection team for source {source_id} ({source_name}) - runs all detectors concurrently.",
+        description=f"Parallel detection team for source {source_id} - runs all detectors concurrently.",
     )
 
 
@@ -142,9 +59,6 @@ def create_multi_source_detection_pipeline(
     sources_config: List[Dict[str, Any]], synthesis_instructions: str = None
 ) -> SequentialAgent:
     """Create a pipeline that processes multiple sources independently then synthesizes results.
-
-    This follows the ADK pattern from the parallel research example, where multiple independent
-    agents run in parallel, then a synthesis agent combines their results.
 
     Parameters
     ----------
@@ -155,7 +69,7 @@ def create_multi_source_detection_pipeline(
         - datasource_folder: Path
         - name: str (optional, for identification)
     synthesis_instructions : str, optional
-        Custom instructions for the synthesis agent. If None, uses default multi-source instructions.
+        Custom instructions for the synthesis agent. If None, uses default comprehensive instructions.
 
     Returns
     -------
@@ -163,14 +77,14 @@ def create_multi_source_detection_pipeline(
         Sequential agent that processes all sources in parallel, then synthesizes results
     """
 
-    # Create source-specific detection agents (each runs 6 detectors in parallel)
+    # Create source-specific detection agents
     source_agents = []
     for config in sources_config:
         source_agent = create_source_specific_detection_agent(
             source_id=config["source_id"],
             day_folder=config["day_folder"],
             datasource_folder=config["datasource_folder"],
-            source_name=config.get("name", ""),
+            agent_name_suffix=config.get("name", ""),
         )
         source_agents.append(source_agent)
 
@@ -181,15 +95,15 @@ def create_multi_source_detection_pipeline(
         description=f"Processes {len(source_agents)} data sources simultaneously, each with full detection suite.",
     )
 
-    # Create synthesis agent with multi-source instructions
+    # Create synthesis agent
     if synthesis_instructions is None:
-        synthesis_instructions = get_default_multi_source_synthesis_instructions()
+        synthesis_instructions = get_default_synthesis_instructions()
 
     synthesis_agent = LlmAgent(
         name="MultiSourceSynthesisAgent",
         model=get_model(),
         instruction=synthesis_instructions,
-        description="Synthesizes detection results from multiple sources into comprehensive cross-source report",
+        description="Synthesizes detection results from multiple sources into comprehensive report",
     )
 
     # Create sequential pipeline: multi-source parallel processing then synthesis
@@ -200,13 +114,13 @@ def create_multi_source_detection_pipeline(
     )
 
 
-def get_default_multi_source_synthesis_instructions() -> str:
-    """Get default synthesis instructions optimized for multi-source reporting.
+def get_default_synthesis_instructions() -> str:
+    """Get default synthesis instructions for multi-source reporting.
 
     Returns
     -------
     str
-        Default synthesis instructions for cross-source analysis and reporting
+        Default synthesis instructions optimized for multi-source reports in executive format
     """
     return """
 MISSION: Generate an executive-level data quality monitoring report in the exact format specified, consolidating detection findings from ALL sources processed independently.

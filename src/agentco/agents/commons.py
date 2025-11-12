@@ -22,15 +22,7 @@ def get_model() -> LiteLlm:
     return LiteLlm(model="openai/gpt-4.1", temperature=0)
 
 
-def get_default_tools(
-    source_id: str = "195385",
-    day_folder: Path = Path(
-        "/Users/carlos.aguirre/dev-personal/agentco/artifacts/Files/2025-09-08_20_00_UTC/"
-    ),
-    datasource_folder: Path = Path(
-        "/Users/carlos.aguirre/dev-personal/agentco/artifacts/Files/datasource_cvs/"
-    ),
-) -> List[Any]:
+def get_tools(source_id: str, day_folder: Path, datasource_folder: Path) -> List[Any]:
     """Get default tools configuration for agents.
 
     Parameters
