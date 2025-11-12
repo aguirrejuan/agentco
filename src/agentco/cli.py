@@ -169,7 +169,6 @@ async def _run_analysis(
         logger.debug(f"   • {len(sources) * 6} detectors (6 per source)")
         logger.debug(f"   • Executive format reports")
         logger.debug(f"   • Parallel processing")
-        logger.debug()
 
         # Step 3: Setup ADK runner
         typer.echo("⚙️  Setting up analysis session...")
