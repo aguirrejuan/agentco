@@ -223,8 +223,8 @@ class DataSourceAnalyzer:
             last_weekday_df["source_id"] == source_id
         ].copy()
 
-        daily_source_df["from"] = "today"
-        last_weekday_source_df["from"] = "last_weekday"
+        daily_source_df["from_period"] = "today"
+        last_weekday_source_df["from_period"] = "last_weekday"
 
         data = pd.concat([daily_source_df, last_weekday_source_df], ignore_index=True)
 

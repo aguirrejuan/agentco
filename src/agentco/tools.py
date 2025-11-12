@@ -127,7 +127,7 @@ class DataSourceToolset(BaseToolset):
         self.data, self.markdown_explanation = self.analyzer.get_data()
 
         # Create today's data subset
-        self.today_data = self.data[self.data["from"] == "today"].copy()
+        self.today_data = self.data[self.data["from_period"] == "today"].copy()
 
         # Initialize DuckDB connections
         self.conn_today = duckdb.connect(":memory:")
@@ -213,8 +213,8 @@ class DataSourceToolset(BaseToolset):
             Query results as markdown table or error message.
 
         Example queries:
-            - SELECT COUNT(*) FROM data WHERE from = 'today';
-            - SELECT filename, rows, from FROM data WHERE from IN ('today', 'last_weekday') ORDER BY filename;
+            - SELECT COUNT(*) FROM data WHERE from_period = 'today';
+            - SELECT filename, rows, from_period FROM data WHERE from_period IN ('today', 'last_weekday') ORDER BY filename;
             - Compare volumes:
               SELECT
                   t.filename,
@@ -222,8 +222,8 @@ class DataSourceToolset(BaseToolset):
                   l.rows as lastweek_rows,
                   t.rows - l.rows as difference
               FROM
-                  (SELECT * FROM data WHERE from = 'today') t
-              JOIN (SELECT * FROM data WHERE from = 'last_weekday') l
+                  (SELECT * FROM data WHERE from_period = 'today') t
+              JOIN (SELECT * FROM data WHERE from_period = 'last_weekday') l
               ON t.filename = l.filename;
 
         Available columns:
@@ -235,10 +235,10 @@ class DataSourceToolset(BaseToolset):
             * 'file_size' : int, size of the file in bytes
             * 'uploaded_at' : timestamp, upload timestamp
             * 'status_message' : str, message associated with the status
-            * 'from': str, 'today' or 'last_weekday' indicating the data source
+            * 'from_period': str, 'today' or 'last_weekday' indicating the data source
 
         Tips:
-            - Always filter by 'from' column to distinguish today vs historical
+            - Always filter by 'from_period' column to distinguish today vs historical
             - Use JOIN to compare same files across periods
             - Use aggregations to minimize data transfer
         """
