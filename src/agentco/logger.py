@@ -22,7 +22,11 @@ def setup_logging():
     )
 
     # Add file handler with rotation
+    log_file = Path("logs/agentco.log")
+    log_file.parent.mkdir(exist_ok=True)  # Create logs directory if it doesn't exist
+
     logger.add(
+        sink=log_file,
         rotation="10 MB",  # Rotate when file reaches 10MB
         retention="1 week",  # Keep logs for 1 week
         format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}",
