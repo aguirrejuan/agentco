@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from google.adk.agents import LlmAgent, ParallelAgent, SequentialAgent
+from google.adk.code_executors import BuiltInCodeExecutor
 
 from ..logger import logger
 from .commons import get_model
@@ -103,6 +104,7 @@ def create_multi_source_detection_pipeline(
         name="MultiSourceSynthesisAgent",
         model=get_model(),
         instruction=synthesis_instructions,
+        code_executor=BuiltInCodeExecutor(),
         description="Synthesizes detection results from multiple sources into comprehensive report",
     )
 

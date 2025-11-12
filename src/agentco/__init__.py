@@ -10,6 +10,7 @@ from .data.data_converter import (
     load_json_to_dataframe,
     load_markdown_explanation,
 )
+from .logger import logger
 from .tools import DataSourceToolset
 
 load_dotenv()
@@ -34,9 +35,9 @@ langfuse = get_client()
 
 # Verify connection
 if langfuse.auth_check():
-    print("Langfuse client is authenticated and ready!")
+    logger.info("Langfuse client is authenticated and ready!")
 else:
-    print("Authentication failed. Please check your credentials and host.")
+    logger.error("Authentication failed. Please check your credentials and host.")
 
 
 GoogleADKInstrumentor().instrument()
