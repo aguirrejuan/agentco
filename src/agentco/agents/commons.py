@@ -19,7 +19,7 @@ def get_model() -> LiteLlm:
     LiteLlm
         Configured LiteLLM instance
     """
-    return LiteLlm(model="openai/gpt-4.1", temperature=0)
+    return LiteLlm(model="openai/gpt-4.1", temperature=0, num_retries=3)
 
 
 def get_tools(source_id: str, day_folder: Path, datasource_folder: Path) -> List[Any]:

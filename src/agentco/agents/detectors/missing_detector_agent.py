@@ -11,6 +11,7 @@ from google.adk.planners import BuiltInPlanner
 from google.genai.types import ThinkingConfig
 from pydantic import BaseModel
 
+from ...logger import logger
 from ..commons import COMMON_INSTRUCTIONS, get_model
 
 # Thinking configuration
@@ -83,19 +84,32 @@ class MissingFileOutputSchema(BaseModel):
     details: str
 
 
-def create_missing_file_detector_agent(tools: List[Any]) -> LlmAgent:
+def create_missing_file_detector_agent(
+    tools: List[Any], source_id: str = None
+) -> LlmAgent:
     """Create and return a missing file detector agent.
 
     Parameters
     ----------
     tools : List[Any]
         List of tools to be used by the agent
+    source_id : str, optional
+        Source identifier for unique output key generation
 
     Returns
     -------
     LlmAgent
         Configured agent for detecting missing and late files
     """
+    # Generate source-specific output key
+    output_key = (
+        f"missing_file_results_{source_id}" if source_id else "missing_file_results"
+    )
+
+    logger.debug(
+        f"Creating MissingFileDetector agent for source_id={source_id} with output_key={output_key}"
+    )
+
     return LlmAgent(
         name="MissingFileDetector",
         model=get_model(),
@@ -103,5 +117,5 @@ def create_missing_file_detector_agent(tools: List[Any]) -> LlmAgent:
         planner=planner,
         instruction=PROMPT_TEMPLATE.format(COMMON_INSTRUCTIONS=COMMON_INSTRUCTIONS),
         output_schema=MissingFileOutputSchema,
-        output_key="missing_file_results",  # Store results in session state
+        output_key=output_key,  # Store results in session state with unique key
     )

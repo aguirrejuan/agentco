@@ -87,19 +87,30 @@ class DuplicatedAndFailedFileOutputSchema(BaseModel):
     details: str
 
 
-def create_duplicated_and_failed_file_detector_agent(tools: List[Any]) -> LlmAgent:
+def create_duplicated_and_failed_file_detector_agent(
+    tools: List[Any], source_id: str = None
+) -> LlmAgent:
     """Create and return a duplicated and failed file detector agent.
 
     Parameters
     ----------
     tools : List[Any]
         List of tools to be used by the agent
+    source_id : str, optional
+        Source identifier for unique output key generation
 
     Returns
     -------
     LlmAgent
         Configured agent for detecting duplicated and failed files
     """
+    # Generate source-specific output key
+    output_key = (
+        f"duplicated_failed_results_{source_id}"
+        if source_id
+        else "duplicated_failed_results"
+    )
+
     return LlmAgent(
         name="DuplicatedandFailedFileDetector",
         model=get_model(),
@@ -107,5 +118,5 @@ def create_duplicated_and_failed_file_detector_agent(tools: List[Any]) -> LlmAge
         planner=planner,
         instruction=PROMPT_TEMPLATE.format(COMMON_INSTRUCTIONS=COMMON_INSTRUCTIONS),
         output_schema=DuplicatedAndFailedFileOutputSchema,
-        output_key="duplicated_failed_results",  # Store results in session state
+        output_key=output_key,  # Store results in session state with unique key
     )

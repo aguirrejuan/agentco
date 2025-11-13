@@ -104,19 +104,30 @@ class UploadOfPreviousFileOutputSchema(BaseModel):
     details: str
 
 
-def create_upload_of_previous_file_detector_agent(tools: List[Any]) -> LlmAgent:
-    """Create and return a previous period file upload detector agent.
+def create_upload_of_previous_file_detector_agent(
+    tools: List[Any], source_id: str = None
+) -> LlmAgent:
+    """Create and return an upload of previous file detector agent.
 
     Parameters
     ----------
     tools : List[Any]
         List of tools to be used by the agent
+    source_id : str, optional
+        Source identifier for unique output key generation
 
     Returns
     -------
     LlmAgent
-        Configured agent for detecting files from previous periods
+        Configured agent for detecting upload of previous files
     """
+    # Generate source-specific output key
+    output_key = (
+        f"previous_period_results_{source_id}"
+        if source_id
+        else "previous_period_results"
+    )
+
     return LlmAgent(
         name="UploadOfPreviousFileDetector",
         model=get_model(),
@@ -124,5 +135,5 @@ def create_upload_of_previous_file_detector_agent(tools: List[Any]) -> LlmAgent:
         planner=planner,
         instruction=PROMPT_TEMPLATE.format(COMMON_INSTRUCTIONS=COMMON_INSTRUCTIONS),
         output_schema=UploadOfPreviousFileOutputSchema,
-        output_key="previous_period_results",  # Store results in session state
+        output_key=output_key,  # Store results in session state with unique key
     )

@@ -102,19 +102,30 @@ class UnexpectedVolumeVariationOutputSchema(BaseModel):
     details: str
 
 
-def create_unexpected_volume_variation_detector_agent(tools: List[Any]) -> LlmAgent:
+def create_unexpected_volume_variation_detector_agent(
+    tools: List[Any], source_id: str = None
+) -> LlmAgent:
     """Create and return an unexpected volume variation detector agent.
 
     Parameters
     ----------
     tools : List[Any]
         List of tools to be used by the agent
+    source_id : str, optional
+        Source identifier for unique output key generation
 
     Returns
     -------
     LlmAgent
         Configured agent for detecting unexpected volume variations
     """
+    # Generate source-specific output key
+    output_key = (
+        f"volume_variation_results_{source_id}"
+        if source_id
+        else "volume_variation_results"
+    )
+
     return LlmAgent(
         name="UnexpectedVolumeVariationDetector",
         model=get_model(),
@@ -122,5 +133,5 @@ def create_unexpected_volume_variation_detector_agent(tools: List[Any]) -> LlmAg
         planner=planner,
         instruction=PROMPT_TEMPLATE.format(COMMON_INSTRUCTIONS=COMMON_INSTRUCTIONS),
         output_schema=UnexpectedVolumeVariationOutputSchema,
-        output_key="volume_variation_results",  # Store results in session state
+        output_key=output_key,  # Store results in session state with unique key
     )

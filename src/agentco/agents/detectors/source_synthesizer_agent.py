@@ -26,11 +26,12 @@ PROMPT_TEMPLATE = """
 MISSION: Synthesize detection results from all parallel detectors for this specific source and produce a comprehensive brief report.
 
 INPUT CONTEXT:
-You will receive results from 6 parallel detectors that have analyzed the same data source. The detectors run first and their results should be available in the conversation context.
+You will receive results from 6 parallel detectors that have analyzed the same data source and stored their findings in session state.
 
-Your job is to synthesize the detection findings from the previous agents in this pipeline into a comprehensive report. 
+**Detection Results Available:**
 
-IMPORTANT: The parallel detectors have already completed their analysis. Look for their structured output in the conversation history above this message.
+
+Your job is to synthesize these detection findings into a comprehensive report.
 
 SYNTHESIS REQUIREMENTS:
 Analyze all detector results and produce a structured report that includes:
@@ -166,29 +167,71 @@ class SourceSynthesizerOutputSchema(BaseModel):
     full_report: str
 
 
-def create_source_synthesizer_agent(tools: List[Any]) -> LlmAgent:
+def create_source_synthesizer_agent(
+    tools: List[Any] = None, output_key: str = None, source_id: str = None
+) -> LlmAgent:
     """Create and return a source synthesizer agent.
 
     Parameters
     ----------
-    tools : List[Any]
-        List of tools to be used by the agent (may be None for synthesis-only operation)
+    tools : List[Any], optional
+        Not used for synthesis - detection results come from session state
+    output_key : str, optional
+        Key to store the synthesizer output in session state for multi-source synthesis
+    source_id : str, optional
+        Source identifier for reading source-specific detection results
 
     Returns
     -------
     LlmAgent
         Configured agent for synthesizing detection results into a source report
     """
-    # Pre-format the template with COMMON_INSTRUCTIONS to avoid conflicts with session state injection
-    formatted_instruction = PROMPT_TEMPLATE.format(
-        COMMON_INSTRUCTIONS=COMMON_INSTRUCTIONS
+    logger.debug(
+        f"Creating SourceSynthesizerAgent for source_id={source_id} with output_key={output_key}"
+    )
+    # Build dynamic instruction with source-specific keys
+    if source_id:
+        detection_results_section = f"""
+**Detection Results Available:**
+- **Missing File Results**: {{{{missing_file_results_{source_id}}}}}
+- **Duplicated/Failed Results**: {{{{duplicated_failed_results_{source_id}}}}} 
+- **Empty File Results**: {{{{empty_file_results_{source_id}}}}}
+- **Volume Variation Results**: {{{{volume_variation_results_{source_id}}}}}
+- **Late Upload Results**: {{{{late_upload_results_{source_id}}}}}
+- **Previous Period Results**: {{{{previous_period_results_{source_id}}}}}
+"""
+    else:
+        # Fallback for backward compatibility
+        detection_results_section = """
+**Detection Results Available:**
+- **Missing File Results**: {{missing_file_results}}
+- **Duplicated/Failed Results**: {{duplicated_failed_results}} 
+- **Empty File Results**: {{empty_file_results}}
+- **Volume Variation Results**: {{volume_variation_results}}
+- **Late Upload Results**: {{late_upload_results}}
+- **Previous Period Results**: {{previous_period_results}}
+"""
+    logger.debug(
+        f"Detection results section for SourceSynthesizerAgent:\n{detection_results_section}"
     )
 
+    # Replace the placeholder in the template
+    source_specific_template = PROMPT_TEMPLATE.replace(
+        "**Detection Results Available:**",
+        detection_results_section.strip(),
+    )
+
+    # Pre-format the template with COMMON_INSTRUCTIONS to avoid conflicts with session state injection
+    formatted_instruction = source_specific_template.format(
+        COMMON_INSTRUCTIONS=COMMON_INSTRUCTIONS
+    )
+    logger.debug(f"Prompt for SourceSynthesizerAgent:\n{formatted_instruction}")
     return LlmAgent(
         name="SourceSynthesizer",
         model=get_model(),
-        tools=tools or [],  # Use empty list if no tools provided
+        tools=[],  # No tools needed - reading from session state
         planner=planner,
-        instruction=formatted_instruction,  # Use pre-formatted instruction
+        instruction=formatted_instruction,  # Session state will be injected automatically
         output_schema=SourceSynthesizerOutputSchema,
+        output_key=output_key,  # Store result in session state if key provided
     )

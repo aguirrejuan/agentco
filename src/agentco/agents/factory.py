@@ -44,14 +44,14 @@ def create_all_detector_agents(
     # Configure tools with custom parameters
     tools = get_tools(source_id, day_folder, datasource_folder)
 
-    # Create all detector agents with the configured tools
+    # Create all detector agents with the configured tools and source-specific keys
     agents = [
-        create_missing_file_detector_agent(tools),
-        create_duplicated_and_failed_file_detector_agent(tools),
-        create_unexpected_empty_file_detector_agent(tools),
-        create_unexpected_volume_variation_detector_agent(tools),
-        create_file_upload_after_schedule_detector_agent(tools),
-        create_upload_of_previous_file_detector_agent(tools),
+        create_missing_file_detector_agent(tools, source_id),
+        create_duplicated_and_failed_file_detector_agent(tools, source_id),
+        create_unexpected_empty_file_detector_agent(tools, source_id),
+        create_unexpected_volume_variation_detector_agent(tools, source_id),
+        create_file_upload_after_schedule_detector_agent(tools, source_id),
+        create_upload_of_previous_file_detector_agent(tools, source_id),
     ]
 
     return agents
@@ -175,15 +175,18 @@ def create_source_analysis_pipeline(
         source_name=source_name,
     )
 
-    # Configure tools for synthesizer agent (reuse same parameters)
-    tools = get_tools(source_id, day_folder, datasource_folder)
-    logger.debug(f"Tools configured: {tools}")
+    logger.debug(
+        f"Created parallel detection agent for source_id={source_id}, source_name={source_name}"
+    )
 
-    # Create source synthesizer agent
-    synthesizer_agent = create_source_synthesizer_agent(tools)
+    # Create source synthesizer agent with unique output key for multi-source synthesis
+    source_report_key = f"source_report_{source_id}"
+    synthesizer_agent = create_source_synthesizer_agent(
+        output_key=source_report_key, source_id=source_id
+    )
 
     logger.debug(
-        f"Created source synthesizer agent for source_id={source_id}, source_name={source_name}"
+        f"Created source synthesizer agent for source_id={source_id}, source_name={source_name}, output_key={source_report_key}"
     )
 
     def sanitize_agent_name(name: str) -> str:
@@ -200,6 +203,8 @@ def create_source_analysis_pipeline(
         sanitized_name = sanitize_agent_name(source_name)
         if sanitized_name:
             agent_name += f"_{sanitized_name}"
+
+    logger.debug(f"Final agent name for pipeline: {agent_name}")
 
     return SequentialAgent(
         name=agent_name,
@@ -261,10 +266,31 @@ def create_multi_source_detection_pipeline(
     if synthesis_instructions is None:
         synthesis_instructions = get_default_multi_source_synthesis_instructions()
 
+    # Build dynamic instruction that includes all source report keys
+    source_report_keys = [
+        f"source_report_{config['source_id']}" for config in sources_config
+    ]
+    source_reports_section = "\n".join(
+        [
+            f"- **Source {config['source_id']} ({config.get('name', 'Unknown')})**: {{source_report_{config['source_id']}}}"
+            for config in sources_config
+        ]
+    )
+
+    dynamic_instruction = f"""
+INPUT CONTEXT:
+You will receive individual source reports from multiple data sources that have been analyzed independently. Each source went through parallel detection and individual synthesis.
+
+**Individual Source Reports:**
+{source_reports_section}
+
+{synthesis_instructions}
+"""
+
     final_synthesis_agent = LlmAgent(
         name="MultiSourceFinalSynthesisAgent",
         model=get_model(),
-        instruction=synthesis_instructions,
+        instruction=dynamic_instruction,
         description="Synthesizes individual source reports into comprehensive executive-level cross-source report",
     )
 
@@ -320,12 +346,7 @@ def get_default_multi_source_synthesis_instructions() -> str:
     return """
 MISSION: Generate an executive-level data quality monitoring report in the exact format specified, consolidating individual source reports from ALL sources processed independently.
 
-INPUT PROCESSING:
-You will receive comprehensive source reports from multiple data sources. Each source was processed with a complete pipeline including:
-1. Parallel detection (6 detectors: missing files, duplicates/failures, empty files, volume variations, late uploads, previous period files)
-2. Source-specific synthesis (structured individual reports with issue classification and recommendations)
-
-Your task is to synthesize these individual source reports into the EXACT executive format shown below.
+Your task is to synthesize the individual source reports provided above into the EXACT executive format shown below.
 
 REQUIRED REPORT FORMAT - MATCH EXACTLY:
 ```
