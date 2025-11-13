@@ -166,15 +166,15 @@ class DataSourceToolset(BaseToolset):
 
         Example queries:
             - SELECT COUNT(*) as total_files FROM data;
-            - SELECT COUNT(*) as failed FROM data WHERE status = 'FAILED';
+            - SELECT COUNT(*) as failed FROM data WHERE status = 'failure';
             - SELECT source_id, filename, status FROM data WHERE is_duplicated = true LIMIT 10;
             - SELECT filename, rows FROM data WHERE rows = 0;
 
         Available columns:
-            * 'source_id' : str, source identifier
-            * 'filename' : str, name of the file
-            * 'rows' : int, number of rows in the file
-            * 'status' : str, status of the file (e.g., 'SUCCESS', 'FAILED', 'STOPPED')
+            * 'source_id' : str, source identifier, example: '195385'
+            * 'filename' : str, name of the file, example: 'data_20230908.csv'
+            * 'rows' : int, number of rows in the file, example: 1000
+            * 'status' : str, status of the file (e.g., 'processed', 'stopped', 'empty', 'failure', 'deleted')
             * 'is_duplicated' : bool, whether the file is duplicated
             * 'file_size' : int, size of the file in bytes
             * 'uploaded_at' : timestamp, upload timestamp
@@ -230,7 +230,7 @@ class DataSourceToolset(BaseToolset):
             * 'source_id' : str, source identifier
             * 'filename' : str, name of the file
             * 'rows' : int, number of rows in the file
-            * 'status' : str, status of the file
+            * 'status' : str, status of the file (e.g., 'processed', 'stopped', 'empty', 'failure', 'deleted')
             * 'is_duplicated' : bool, whether the file is duplicated
             * 'file_size' : int, size of the file in bytes
             * 'uploaded_at' : timestamp, upload timestamp
@@ -296,14 +296,16 @@ class DataSourceToolset(BaseToolset):
         try:
             checks = self.conn_today.query(
                 """
-                SELECT 
+                SELECT
                     COUNT(*) as total_files,
                     COUNT(DISTINCT source_id) as unique_sources,
                     SUM(CASE WHEN rows = 0 THEN 1 ELSE 0 END) as empty_files,
                     SUM(CASE WHEN is_duplicated THEN 1 ELSE 0 END) as duplicates,
-                    SUM(CASE WHEN status = 'FAILED' THEN 1 ELSE 0 END) as failed_files,
-                    SUM(CASE WHEN status = 'STOPPED' THEN 1 ELSE 0 END) as stopped_files,
-                    SUM(CASE WHEN status = 'SUCCESS' THEN 1 ELSE 0 END) as successful_files,
+                    SUM(CASE WHEN status = 'failure' THEN 1 ELSE 0 END) as failed_files,
+                    SUM(CASE WHEN status = 'stopped' THEN 1 ELSE 0 END) as stopped_files,
+                    SUM(CASE WHEN status = 'processed' THEN 1 ELSE 0 END) as successful_files,
+                    SUM(CASE WHEN status = 'empty' THEN 1 ELSE 0 END) as empty_status_files,
+                    SUM(CASE WHEN status = 'deleted' THEN 1 ELSE 0 END) as deleted_files,
                     MIN(uploaded_at) as earliest_upload,
                     MAX(uploaded_at) as latest_upload,
                     SUM(rows) as total_rows,

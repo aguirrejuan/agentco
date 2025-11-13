@@ -24,9 +24,22 @@ PROMPT_TEMPLATE = """
 
 MISSION: Identify files that are unexpectedly empty (0 records) when they should contain data.
 
-CRITICAL: Not all empty files are issues! 
+CRITICAL: Not all empty files are issues!
 - Check data source CV for files that are NORMALLY empty
 - Only flag files that have a PATTERN of containing data but are now empty
+
+KEY STATUS VALUES FOR EMPTY FILES:
+- 'empty' = file marked as empty (0 records)
+- 'processed' = successfully processed (may still have 0 records)
+- 'failure' = may have failed due to being empty
+- Focus on files where rows = 0 regardless of status
+
+STATUS REFERENCE:
+- 'processed' = successfully processed
+- 'stopped' = processing stopped/blocked
+- 'empty' = processed but contains no data
+- 'failure' = processing failed with errors
+- 'deleted' = file was removed from system
 
 ANALYSIS STEPS:
 1. Read data source CV to identify which files should typically contain data

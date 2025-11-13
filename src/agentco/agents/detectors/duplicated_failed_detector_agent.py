@@ -25,14 +25,22 @@ PROMPT_TEMPLATE = """
 MISSION: Identify duplicate files and files with processing errors.
 
 DETECTION CRITERIA FOR DUPLICATES:
-- is_duplicated = TRUE
-- status = 'STOPPED' 
+- is_duplicated = TRUE AND status = 'stopped'
 - Multiple files with identical or near-identical names (differing only by hash/timestamp)
+- Duplicate files are typically blocked from processing (status = 'stopped')
 
 DETECTION CRITERIA FOR FAILED FILES:
-- status = 'FAILED' or similar error states
+- status = 'failure' (processing failed)
+- status = 'stopped' (processing was stopped/blocked)
+- status = 'deleted' (file was deleted, possibly due to errors)
 - status_message contains error indicators
-- status = 'STOPPED' or 'ERROR'
+
+STATUS REFERENCE:
+- 'processed' = successfully processed
+- 'stopped' = processing stopped/blocked (often duplicates)
+- 'empty' = processed but contains no data
+- 'failure' = processing failed with errors
+- 'deleted' = file was removed from system
 
 ANALYSIS STEPS:
 1. Query for duplicates: 
@@ -45,9 +53,9 @@ ANALYSIS STEPS:
 
 2. Query for failed files:
 ```sql
-   SELECT filename, status, status_message, uploaded_at 
-   FROM data 
-   WHERE from = 'today' AND status IN ('FAILED', 'ERROR', 'STOPPED');
+   SELECT filename, status, status_message, uploaded_at
+   FROM data
+   WHERE from = 'today' AND status IN ('failure', 'stopped', 'deleted');
 ```
 
 3. Identify naming pattern duplicates:
@@ -66,8 +74,8 @@ ANALYSIS STEPS:
 ```sql
    SELECT filename, is_duplicated, status, status_message
    FROM data
-   WHERE from = 'today' 
-   AND (is_duplicated = true OR status IN ('FAILED', 'ERROR', 'STOPPED'));
+   WHERE from = 'today'
+   AND (is_duplicated = true OR status IN ('failure', 'stopped', 'deleted'));
 ```
 
 OUTPUT REQUIREMENTS:

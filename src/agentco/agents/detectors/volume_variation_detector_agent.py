@@ -26,44 +26,58 @@ MISSION: Detect anomalous volume variations based on day-of-week patterns.
 
 KEY PRINCIPLE: Compare like-to-like (Monday to Monday, Tuesday to Tuesday, etc.)
 
+STATUS CONSIDERATIONS FOR VOLUME ANALYSIS:
+- Focus on files with status = 'processed' or 'empty' for fair comparison
+- Exclude 'failure', 'stopped', 'deleted' from volume comparisons (incomplete processing)
+- Volume variations should compare successfully processed files only
+- An 'empty' status file still has rows = 0, which is valid for comparison
+
+STATUS REFERENCE:
+- 'processed' = successfully processed (use for volume comparison)
+- 'empty' = processed but contains no data (use for volume comparison)
+- 'stopped' = processing stopped/blocked (exclude from volume comparison)
+- 'failure' = processing failed with errors (exclude from volume comparison)
+- 'deleted' = file was removed from system (exclude from volume comparison)
+
 ANALYSIS STEPS:
 1. Read data source CV to understand normal volume ranges and patterns
 
-2. Get today's volumes:
+2. Get today's volumes (only successfully processed files):
 ```sql
-   SELECT filename, rows, uploaded_at 
-   FROM data 
-   WHERE from = 'today' AND rows > 0
+   SELECT filename, rows, uploaded_at, status
+   FROM data
+   WHERE from = 'today'
+     AND status IN ('processed', 'empty')
    ORDER BY rows DESC;
 ```
 
-3. Compare with same weekday last week:
+3. Compare with same weekday last week (only successfully processed):
 ```sql
-   SELECT 
+   SELECT
        t.filename,
        t.rows as today_volume,
        l.rows as lastweek_volume,
        ROUND(((t.rows - l.rows) * 100.0 / NULLIF(l.rows, 0)), 2) as pct_change,
        ABS(t.rows - l.rows) as abs_difference
-   FROM 
-       (SELECT * FROM data WHERE from = 'today') t
-   INNER JOIN 
-       (SELECT * FROM data WHERE from = 'last_weekday') l
+   FROM
+       (SELECT * FROM data WHERE from = 'today' AND status IN ('processed', 'empty')) t
+   INNER JOIN
+       (SELECT * FROM data WHERE from = 'last_weekday' AND status IN ('processed', 'empty')) l
    ON t.filename = l.filename
    WHERE l.rows > 0;
 ```
 
-4. Identify significant variations:
+4. Identify significant variations (>50% change):
 ```sql
-   SELECT 
+   SELECT
        t.filename,
        t.rows as today_volume,
        l.rows as lastweek_volume,
        ROUND(((t.rows - l.rows) * 100.0 / NULLIF(l.rows, 0)), 2) as pct_change
-   FROM 
-       (SELECT * FROM data WHERE from = 'today') t
-   INNER JOIN 
-       (SELECT * FROM data WHERE from = 'last_weekday') l
+   FROM
+       (SELECT * FROM data WHERE from = 'today' AND status IN ('processed', 'empty')) t
+   INNER JOIN
+       (SELECT * FROM data WHERE from = 'last_weekday' AND status IN ('processed', 'empty')) l
    ON t.filename = l.filename
    WHERE l.rows > 0
    AND ABS(((t.rows - l.rows) * 100.0 / NULLIF(l.rows, 0))) > 50;

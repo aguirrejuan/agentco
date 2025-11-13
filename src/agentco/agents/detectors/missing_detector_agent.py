@@ -31,6 +31,19 @@ DETECTION CRITERIA:
 - Files that arrived >4 hours after their expected schedule window
 - Consider day-of-week patterns (e.g., some files may not be expected on weekends)
 
+STATUS CONSIDERATIONS:
+- Missing files = Files expected but NOT in today's data (any status)
+- Check all statuses when identifying received files
+- A file with status = 'deleted' may indicate it was received then removed
+- Focus on completely missing files vs files with error statuses
+
+STATUS REFERENCE:
+- 'processed' = successfully processed
+- 'stopped' = processing stopped/blocked
+- 'empty' = processed but contains no data
+- 'failure' = processing failed with errors
+- 'deleted' = file was removed from system
+
 ANALYSIS STEPS:
 1. Read data source CV to identify all expected files and their schedules
 2. Query today's data: SELECT DISTINCT filename, uploaded_at, status FROM data WHERE from = 'today'

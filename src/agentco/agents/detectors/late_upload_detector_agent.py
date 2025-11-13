@@ -26,6 +26,19 @@ MISSION: Detect files uploaded significantly later than their expected schedule.
 
 SEVERITY: This produces WARNING-level incidents, NOT urgent issues.
 
+STATUS CONSIDERATIONS FOR LATE UPLOADS:
+- Check uploaded_at time for ALL statuses (late uploads can have any status)
+- Include files with any status: 'processed', 'empty', 'failure', 'stopped'
+- Status indicates processing outcome, not upload timing
+- Even failed files can be flagged as late uploads
+
+STATUS REFERENCE:
+- 'processed' = successfully processed
+- 'stopped' = processing stopped/blocked
+- 'empty' = processed but contains no data
+- 'failure' = processing failed with errors
+- 'deleted' = file was removed from system
+
 ANALYSIS STEPS:
 1. Read data source CV to get expected arrival times for each file
 

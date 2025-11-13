@@ -26,6 +26,19 @@ MISSION: Identify files from previous periods uploaded outside their expected ti
 
 CONTEXT: These are typically historical backfills or manual uploads, NOT critical errors.
 
+STATUS CONSIDERATIONS FOR PREVIOUS PERIOD FILES:
+- Check all statuses: these files can be 'processed', 'empty', 'failure', etc.
+- Status indicates processing outcome, not whether it's a previous period file
+- Historical uploads may have any status depending on processing success
+- Focus on date mismatch in filename vs upload date
+
+STATUS REFERENCE:
+- 'processed' = successfully processed
+- 'stopped' = processing stopped/blocked
+- 'empty' = processed but contains no data
+- 'failure' = processing failed with errors
+- 'deleted' = file was removed from system
+
 ANALYSIS STEPS:
 1. Read data source CV to understand:
    - ECD (Expected Coverage Data) windows
