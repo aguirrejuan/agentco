@@ -347,37 +347,136 @@ def get_default_multi_source_synthesis_instructions() -> str:
         Default synthesis instructions for cross-source analysis and reporting
     """
     return """
-MISSION: Generate executive-level data quality report consolidating individual source reports.
+MISSION: Generate an executive-level data quality monitoring report in the exact format specified, consolidating detection findings from ALL sources processed independently.
 
-REQUIRED FORMAT - MATCH EXACTLY:
+INPUT PROCESSING:
+You will receive detection results from multiple data sources. Each source was processed independently with its own complete set of 6 detectors (missing files, duplicates/failures, empty files, volume variations, late uploads, previous period files). Synthesize these into the EXACT format shown below.
+
+REQUIRED REPORT FORMAT - MATCH EXACTLY:
+```
 *Report generated at UTC HOUR*: HH:MM UTC
 
 * Urgent Action Required*
-• *Source_Name (id: XXXXXX)* – YYYY-MM-DD: [issue details] → *Action:* [specific steps]
+• *Source_Name (id: XXXXXX)* – YYYY-MM-DD: [detailed issue description with specifics] → *Action:* [specific action steps]
 
 * Needs Attention*
-• *Source_Name (id: XXXXXX)* – YYYY-MM-DD: [issue details] → *Action:* [if needed]
+• *Source_Name (id: XXXXXX)* – YYYY-MM-DD: [detailed issue description with specifics] → *Action:* [specific action steps if needed]
+
+* No Action Needed*
+• *Source_Name (id: XXXXXX)* – YYYY-MM-DD: `[X,XXX] records`
+• All other recent files appear normal
+```
+
+CRITICALITY CLASSIFICATION:
+
+* Urgent Action Required* - Sources with:
+- 2+ files missing from same source  
+- Critical duplicated/failed files blocking processing
+- Volume changes >100% increase or >80% decrease
+- Multiple files failed with same error pattern
+- Any processing-blocking issues
+
+* Needs Attention* - Sources with:
+- 1 file missing past expected window
+- Volume variations 50-100% from normal
+- Files arriving significantly late (>4 hours)
+- Unexpected empty files that historically had data
+- Schedule changes or timing anomalies
+
+* No Action Needed* - Sources with:
+- All files received and processed normally
+- Volumes within acceptable ranges (±50%)
+- No duplicates, failures, or timing issues
+- Previous period uploads (informational only)
+
+EXACT FORMATTING REQUIREMENTS:
+
+1. **Start with Timestamp**: *Report generated at UTC HOUR*: HH:MM UTC
+2. **Three Sections Only**: Urgent Action Required, Needs Attention, No Action Needed
+3. **Bullet Format**: • *Source_Name (id: XXXXXX)* – YYYY-MM-DD: description
+4. **Action Format**: → *Action:* specific steps (only for urgent/attention items)
+5. **Record Counts**: `[X,XXX] records` for normal sources
+
+DETAILED FORMATTING RULES:
+
+**Urgent Action Required Section:**
+• *Source_Name (id: XXXXXX)* – YYYY-MM-DD: X files missing past HH:MM–HH:MM UTC window — entities: [list entities] → *Action:* Notify provider to generate/re-send; re-run ingestion and verify completeness
+
+**Needs Attention Section:**
+• *Source_Name (id: XXXXXX)* – YYYY-MM-DD: [specific issue description] — [additional context] → *Action:* [if action needed]
+
+**No Action Needed Section:**
+• *Source_Name (id: XXXXXX)* – YYYY-MM-DD: `[X,XXX] records`
+• All other recent files appear normal
+
+SPECIFIC CONTENT EXTRACTION:
+
+**Missing Files**: Extract specific file patterns, time windows, affected entities
+**Duplicates/Failed**: Identify duplicate files, failed status, processing blocks
+**Empty Files**: Note files that should have data but are empty
+**Volume Variations**: Calculate percentage changes, identify unusual patterns
+**Late Uploads**: Calculate delay times, compare to expected schedules
+**Previous Period**: Note files from previous periods (usually informational)
+
+ENTITY EXTRACTION:
+From file names, extract business entities like: Clien_CBK, WhiteLabel, Shop, Google, POC, Market, Innovation, Donation, Beneficios, ApplePay, Anota-ai, AddCard, Clien_payments, ClienX_Clube, Saipos, etc.
+
+TIME WINDOW ANALYSIS:
+- Extract expected upload windows (e.g., 08:08–08:18 UTC)
+- Calculate delays and early arrivals
+- Note schedule changes or anomalies
+
+VOLUME ANALYSIS:
+- Calculate record counts for normal operations
+- Identify volume increases/decreases with percentages
+- Compare to historical baselines (e.g., "usual Monday 40k–55k")
+
+ACTION RECOMMENDATIONS:
+**For Missing Files**: "Notify provider to generate/re-send; re-run ingestion and verify completeness"
+**For Schedule Changes**: "Confirm schedule change; adjust downstream triggers if needed"  
+**For Volume Anomalies**: "Confirm coverage/window; monitor next run"
+**For Late Files**: "Validate downstream completed; track if persists"
+
+FINAL OUTPUT FORMAT - MUST MATCH EXACTLY:
+
+*Report generated at UTC HOUR*: HH:MM UTC
+
+* Urgent Action Required*
+• *Source_Name (id: XXXXXX)* – YYYY-MM-DD: [detailed issue] → *Action:* [specific steps]
+
+* Needs Attention*
+• *Source_Name (id: XXXXXX)* – YYYY-MM-DD: [detailed issue] → *Action:* [specific steps if needed]
 
 * No Action Needed*
 • *Source_Name (id: XXXXXX)* – YYYY-MM-DD: `[X,XXX] records`
 • All other recent files appear normal
 
-CLASSIFICATION:
-**Urgent**: 2+ missing files, failed processing, >100% volume change, processing blocks
-**Attention**: 1 missing file, 50-100% volume change, >4h delays, schedule changes  
-**Normal**: All received, volumes ±50%, no failures/duplicates
+CRITICAL FORMATTING RULES - FOLLOW EXACTLY:
+- Use EXACT bullet format: • (bullet character, not dash or hyphen)
+- Use EXACT bold formatting: *text* (asterisks, NOT **text** markdown)
+- Use EXACT timestamp format: HH:MM UTC (24-hour format)
+- Use EXACT record format: `[X,XXX] records` (backticks and brackets)
+- Use EXACT action format: → *Action:* text (arrow character)
+- Use EXACT section headers: * Urgent Action Required* (asterisk format)
+- NO markdown formatting (**bold** is forbidden)
+- NO additional sections beyond the three required
+- NO executive summaries or additional analysis
+- NO emojis, decorations, or extra formatting
+- Keep descriptions specific with entities and time windows
+- If no issues in a section, state "• No [issues/attention] required at this time."
 
-FORMATTING:
-- Use • bullets and *text* for bold (NOT **text**)
-- Format: → *Action:* for recommendations
-- Records: `[X,XXX] records` in backticks
-- Include entities, time windows, specific counts
-- No markdown, emojis, or extra sections
+EXAMPLE OF PERFECT FORMAT:
+*Report generated at UTC HOUR*: 14:30 UTC
 
-ACTIONS:
-- Missing files: "Notify provider to generate/re-send; re-run ingestion and verify completeness"
-- Schedule changes: "Confirm schedule change; adjust downstream triggers if needed"
-- Volume anomalies: "Confirm coverage/window; monitor next run"
+* Urgent Action Required*
+• *Payments_Layout_1_V3 (id: 220504)* – 2025-09-07: 14 files missing past 08:08–08:18 UTC window — entities: Clien_CBK, WhiteLabel, Shop → *Action:* Notify provider to generate/re-send; re-run ingestion and verify completeness
+
+* Needs Attention*  
+• *Settlement_Layout_2 (id: 195385)* – 2025-09-08: Saipos file delivered early at 08:06 UTC (usual ~17:20) — Confirm schedule change
+
+* No Action Needed*
+• *Sale_payments_2 (id: 228036)* – 2025-09-08: `[1,233,496] records`
+• All other recent files appear normal
 """
 
 
