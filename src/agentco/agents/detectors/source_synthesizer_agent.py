@@ -23,7 +23,7 @@ planner = BuiltInPlanner(thinking_config=thinking_config)
 PROMPT_TEMPLATE = """
 {COMMON_INSTRUCTIONS}
 
-MISSION: Synthesize detection results from all parallel detectors for this specific source and produce a comprehensive brief report.
+MISSION: Synthesize detection results from all parallel detectors for this specific source and produce a concise summary for final report generation.
 
 INPUT CONTEXT:
 You will receive results from 6 parallel detectors that have analyzed the same data source and stored their findings in session state.
@@ -31,53 +31,24 @@ You will receive results from 6 parallel detectors that have analyzed the same d
 **Detection Results Available:**
 
 
-Your job is to synthesize these detection findings into a comprehensive report.
+Your job is to synthesize these detection findings into a concise output format.
 
 SYNTHESIS REQUIREMENTS:
-Analyze all detector results and produce a structured report that includes:
+Analyze all detector results and produce:
 
-1. **Source Summary**: Source ID, name, and processing date
-2. **Issue Classification**: Categorize findings by severity (Critical, Warning, Info)
-3. **Key Findings**: Consolidate related issues and remove duplicates
-4. **Impact Assessment**: Evaluate business impact of identified issues
-5. **Recommended Actions**: Provide specific actionable recommendations
+1. **Issue Counts**: Count critical, warning, and informational issues
+2. **Issues Summary**: 2-3 sentence consolidated summary of key problems
+3. **Impact**: 1-2 sentence business impact assessment  
+4. **Actions**: Maximum 3 priority recommendations
 
-REPORT STRUCTURE:
-```
-# Report for Source ID: 'source_id', Name: 'source_name'
-Date: 'processing_date'
+OUTPUT FORMAT:
+Produce concise structured output matching the schema:
 
-## Issue Summary
-- Critical Issues: 'count'
-- Warnings: 'count'
-- Informational: 'count'
+- **Issues Summary**: Brief 2-3 sentence overview of key findings (missing files, failures, delays, etc.)
+- **Impact**: 1-2 sentence assessment of business/operational impact
+- **Actions**: Maximum 3 priority recommendations, ordered by urgency
 
-## Critical Issues
-[List critical issues that require immediate action]
-- Missing Files: [details with file names, expected times]
-- Failed Processing: [details with failure reasons]
-- Data Integrity: [details of corruption or significant anomalies]
-
-## Warnings  
-[List issues that need attention but are not blocking]
-- Late Deliveries: [details with delay times]
-- Volume Changes: [details with percentage changes]
-- Schedule Variations: [details of timing anomalies]
-
-## Informational
-[List items for awareness but no action required]
-- Previous Period Files: [details if any]
-- Normal Operations: [confirmation of successful processing]
-
-## Impact Assessment
-[Assess business impact and downstream effects]
-
-## Recommended Actions
-[Specific actionable recommendations with priority]
-1. Immediate: [urgent actions]
-2. Short-term: [actions within 24-48 hours]  
-3. Monitoring: [what to watch for next processing cycle]
-```
+Keep descriptions focused and actionable. Avoid detailed file listings or verbose explanations.
 
 ANALYSIS GUIDELINES:
 
@@ -106,65 +77,39 @@ Extract business entities from filenames: Clien_CBK, WhiteLabel, Shop, Google, P
 - Note if changes are within acceptable business ranges
 
 OUTPUT REQUIREMENTS:
-- Produce a complete, structured report in the exact format specified
-- Include specific file names, entities, times, and quantified impacts
-- Provide actionable recommendations with clear priorities
-- Consolidate findings to avoid redundancy
-- Focus on business impact and operational implications
+- Be concise - prioritize brevity over detail
+- Focus on actionable insights, not exhaustive descriptions
+- Consolidate similar issues into summary statements
+- Limit actions to top 3 priorities only
+- Use quantified impacts where relevant but keep descriptions short
 
 EXAMPLE OUTPUT:
-```
-# Report for Source ID: 220504, Name: Payments_Layout_1_V3
-Date: 2025-09-08
+Source: 220504, Payments_Layout_1_V3, 2025-09-08
+Counts: 2 critical, 1 warning, 1 info
 
-## Issue Summary
-- Critical Issues: 2
-- Warnings: 1
-- Informational: 1
+Issues Summary: 14 files missing from Clien_CBK, WhiteLabel, and Shop entities past expected 08:08 UTC window. 2 files failed schema validation. Saipos delivery delayed 4.2 hours but processed successfully.
 
-## Critical Issues
-- Missing Files: 14 files not received past expected 08:08-08:18 UTC window
-  - Entities affected: Clien_CBK, WhiteLabel, Shop
-  - Files: Payments_Clien_CBK_20250908.csv, Payments_WhiteLabel_20250908.csv, [+12 more]
-  
-- Failed Processing: 2 files failed ingestion due to schema validation
-  - Files: Payments_Shop_20250908.csv, Payments_Google_20250908.csv
+Impact: Critical impact on daily reconciliation - 60% of expected volume missing, blocking downstream reporting for key payment channels.
 
-## Warnings
-- Late Delivery: Saipos file arrived 4.2 hours after expected window
-  - Expected: 08:08 UTC, Actual: 12:20 UTC
-  - File: Payments_Saipos_20250908.csv (1,234 records)
-
-## Informational  
-- Normal Operations: 8 files processed successfully with expected volumes
-- Total Records Processed: 45,678 (within normal range 40k-55k)
-
-## Impact Assessment
-Critical impact on daily reconciliation process due to missing files. 14 missing files represent approximately 60% of expected daily volume for key payment entities. Failed processing files block downstream reporting for Shop and Google payment channels.
-
-## Recommended Actions
-1. Immediate: Contact data provider to regenerate and resend missing files for Clien_CBK, WhiteLabel, and Shop entities
-2. Short-term: Re-run ingestion pipeline once missing files received; validate schema for failed files
-3. Monitoring: Track Saipos delivery times for pattern; confirm if 12:20 delivery represents schedule change
-```
+Actions:
+1. Contact provider to regenerate missing files immediately
+2. Re-run ingestion pipeline once files received  
+3. Monitor Saipos delivery pattern for schedule changes
 """
 
 
 class SourceSynthesizerOutputSchema(BaseModel):
-    """Schema for source synthesizer results."""
+    """Schema for source synthesizer results - concise output for final report generation."""
 
     source_id: str
     source_name: str
     processing_date: str
-    critical_issues_count: int
-    warnings_count: int
-    informational_count: int
-    critical_issues: list[str]
-    warnings: list[str]
-    informational: list[str]
-    impact_assessment: str
-    recommended_actions: list[str]
-    full_report: str
+    critical_count: int
+    warning_count: int
+    info_count: int
+    issues_summary: str  # Brief consolidated summary of all issues
+    impact: str  # Concise impact assessment
+    actions: list[str]  # Top 3 recommended actions only
 
 
 def create_source_synthesizer_agent(
