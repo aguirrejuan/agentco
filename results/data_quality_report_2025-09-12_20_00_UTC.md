@@ -1,0 +1,25 @@
+*Report generated at UTC HOUR*: 15:00 UTC
+
+* Urgent Action Required*
+• *Settlement_Layout_2 (id: 195385)* – 2025-09-12: 29 files missing past 08:00–09:00 UTC window — entities: Clube, Shop, Donation, Anota-ai, DataOnly, WhiteLabel; 25 files unexpectedly empty that historically had significant data → *Action:* Notify provider to generate/re-send; re-run ingestion and verify completeness
+• *Settlement_Layout_1 (id: 196125)* – 2025-09-12: 44 files missing past 08:04–08:12 UTC window — entities: Debito, 3DS, ApplePay, MVP, Market, PwGoogle, Card, POC, Settlement → *Action:* Notify provider to generate/re-send; re-run ingestion and verify completeness
+• *Soop Transaction PIX 3 (id: 199944)* – 2025-09-12: 2 files duplicated and blocked from processing (status: stopped) — 2_Soop_CPIX_20250819_M___PIX_78AFAE04362B40899DAEE1B6EF3624D7_14380200000121_0002.csv, 2_Soop_CPIX_20250819_M___PIX_78AFAE04362B40899DAEE1B6EF3624D7_14380200000121_0001.csv → *Action:* Notify provider to resolve duplicate/blocked files; re-run ingestion and verify completeness
+• *Desco PIX (id: 209773)* – 2025-09-16: 5 files missing past 15:10–15:25 UTC window — expected: DescoPixrecebimentos_2025-09-12.csv, DescoPixrecebimentos_2025-09-13.csv, DescoPixrecebimentos_2025-09-14.csv, DescoPixrecebimentos_2025-09-15.csv, DescoPixrecebimentos_2025-09-16.csv → *Action:* Notify provider to generate/re-send; re-run ingestion and verify completeness
+• *Payments_Layout_1_V3 (id: 220504)* – 2025-09-12: BR_ApplePay volume 1,719,230 (+161%), BR_PwGoogle 624,731 (+103%), BR_Market 20,957 (+222%), BR_Anota-ai 14,472 (+581%), BR_Beneficios -94%, BR_CBK -67% to -83% — volume swings >100% or <-80%; 46 files uploaded >4 hours late → *Action:* Confirm coverage/window; monitor next run
+• *Payments_Layout_2_V3 (id: 220505)* – 2025-09-12: 8 failed files and 2 duplicates blocking processing — all BR_MVP_payments_accounting_report_filtered, error: column structure mismatch; 12 files uploaded >4 hours late → *Action:* Notify provider to resolve schema mismatch and re-upload failed files; re-run ingestion and verify completeness. Confirm root cause for late uploads and volume anomalies; monitor next run.
+• *Itm Devolução (id: 224603)* – 2025-09-12: 16 files with volume increases >50% (up to 111.8%) — e.g., ItmLancamentos_devolucao_2025-04-05.csv: 39,157 rows (↑111.8% vs. 18,491) → *Action:* Investigate the root cause of these volume spikes. Confirm if there is a business event, data duplication, or upstream process change. Review for potential impact on downstream systems and reporting. If no business justification, treat as a critical anomaly.
+• *WuPay_Sale payments_2 (id: 228036)* – 2025-09-11: 4 duplicate files (blocked), 3 failed files (schema mismatch), 2 deleted files — processing blocked for multiple files → *Action:* Notify provider to resolve duplicate and failed file issues; reprocess affected files and verify completeness
+• *WuPay_STL payments_2 (id: 228038)* – 2025-09-11: 14 duplicate files blocked (status 'stopped'), 3 failed (column mismatch), 2 deleted — processing blocked for affected files → *Action:* Notify provider to review duplicate and failed files; resolve column mismatches and re-upload; re-run ingestion and verify completeness
+• *WuPay_Sale_adjustments_3 (id: 239611)* – 2025-09-08: 6 duplicated files blocked processing — entities: anota-ai, _; periods: 16–24 July, 19–20 June → *Action:* Notify provider to resolve duplicate file issue and re-upload affected files; re-run ingestion and verify completeness
+• *WuPay_STL adjustments_3 (id: 239613)* – 2025-09-11: 37 duplicate files blocked processing — 18.5% of today's uploads stopped; all require resolution to avoid data gaps → *Action:* Notify provider to investigate and resolve duplicate file issue; reprocess affected files after duplicates are cleared to ensure data completeness and avoid reprocessing errors
+
+* Needs Attention*
+• *MyPal_Activity report (id: 195439)* – 2025-09-09: 6 files uploaded >4 hours after expected schedule (up to 168 hours late) — highly abnormal for this data source; 7 previous period files uploaded 4+ days late → *Action:* Confirm schedule change; adjust downstream triggers if needed. Validate downstream completed; track if persists.
+• *Soop - Tipo 3 (id: 207938)* – 2025-09-12: 21 files uploaded >4 hours late (delays 24–168h) — entities: POS_MARKETPLACE, PAGO, SHOP_MARKETPLACE; 5 duplicate files detected (processed) → *Action:* Validate downstream completed; track if persists
+• *Itm Pagamentos (id: 224602)* – 2025-09-12: ItmLancamentos_pagamento_2025-08-25.csv volume 192,278 (−61% vs last Monday 496,722; within usual 148,987–649,988) → *Action:* Confirm coverage/window; monitor next run
+
+* No Action Needed*
+• *MyPal_DBR RX (id: 195436)* – 2025-09-12: `[13,651,900] records`
+• *Soop - Tipo 2 (id: 207936)* – 2025-09-12: `[443,742] records`
+• *Desco Devoluções (id: 211544)* – 2025-09-12: `[936,319] records`
+• *Payments_Layout_3_V3 (id: 220506)* – 2025-09-12: `[108,644,000] records`
