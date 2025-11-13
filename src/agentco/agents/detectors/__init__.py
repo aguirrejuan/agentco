@@ -24,6 +24,10 @@ from .previous_period_detector_agent import (
     UploadOfPreviousFileOutputSchema,
     create_upload_of_previous_file_detector_agent,
 )
+from .source_synthesizer_agent import (
+    SourceSynthesizerOutputSchema,
+    create_source_synthesizer_agent,
+)
 from .volume_variation_detector_agent import (
     UnexpectedVolumeVariationOutputSchema,
     create_unexpected_volume_variation_detector_agent,
@@ -37,6 +41,7 @@ __all__ = [
     "create_unexpected_volume_variation_detector_agent",
     "create_file_upload_after_schedule_detector_agent",
     "create_upload_of_previous_file_detector_agent",
+    "create_source_synthesizer_agent",
     # Output schemas
     "MissingFileOutputSchema",
     "DuplicatedAndFailedFileOutputSchema",
@@ -44,4 +49,5 @@ __all__ = [
     "UnexpectedVolumeVariationOutputSchema",
     "FileUploadAfterScheduleOutputSchema",
     "UploadOfPreviousFileOutputSchema",
+    "SourceSynthesizerOutputSchema",
 ]

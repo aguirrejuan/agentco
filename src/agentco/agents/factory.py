@@ -15,6 +15,7 @@ from .detectors import (
     create_duplicated_and_failed_file_detector_agent,
     create_file_upload_after_schedule_detector_agent,
     create_missing_file_detector_agent,
+    create_source_synthesizer_agent,
     create_unexpected_empty_file_detector_agent,
     create_unexpected_volume_variation_detector_agent,
     create_upload_of_previous_file_detector_agent,
@@ -138,6 +139,75 @@ def create_source_specific_detection_agent(
     )
 
 
+def create_source_analysis_pipeline(
+    source_id: str, day_folder: Path, datasource_folder: Path, source_name: str = ""
+) -> SequentialAgent:
+    """Create a complete analysis pipeline for a specific source with parallel detection followed by synthesis.
+
+    This creates a sequential pipeline that:
+    1. Runs all 6 detectors in parallel for comprehensive analysis
+    2. Synthesizes results into a structured source report
+
+    Parameters
+    ----------
+    source_id : str
+        The source identifier for the data source toolset
+    day_folder : Path
+        Path to the day folder containing data files
+    datasource_folder : Path
+        Path to the datasource folder containing CV files
+    source_name : str, optional
+        Human-readable name for the source (for identification)
+
+    Returns
+    -------
+    SequentialAgent
+        Sequential agent that runs parallel detection then synthesis
+    """
+    logger.debug(
+        f"Creating source analysis pipeline for source_id={source_id}, source_name={source_name}"
+    )
+    # Create parallel detection agent first (this will create the tools)
+    parallel_detection_agent = create_source_specific_detection_agent(
+        source_id=source_id,
+        day_folder=day_folder,
+        datasource_folder=datasource_folder,
+        source_name=source_name,
+    )
+
+    # Configure tools for synthesizer agent (reuse same parameters)
+    tools = get_tools(source_id, day_folder, datasource_folder)
+    logger.debug(f"Tools configured: {tools}")
+
+    # Create source synthesizer agent
+    synthesizer_agent = create_source_synthesizer_agent(tools)
+
+    logger.debug(
+        f"Created source synthesizer agent for source_id={source_id}, source_name={source_name}"
+    )
+
+    def sanitize_agent_name(name: str) -> str:
+        """Sanitize name for use in agent identifiers."""
+        import re
+
+        sanitized = re.sub(r"[^a-zA-Z0-9_]", "_", name)
+        sanitized = re.sub(r"_+", "_", sanitized)
+        return sanitized.strip("_")
+
+    # Create agent name
+    agent_name = f"SourceAnalysisPipeline_{source_id}"
+    if source_name:
+        sanitized_name = sanitize_agent_name(source_name)
+        if sanitized_name:
+            agent_name += f"_{sanitized_name}"
+
+    return SequentialAgent(
+        name=agent_name,
+        sub_agents=[parallel_detection_agent, synthesizer_agent],
+        description=f"Complete analysis pipeline for source {source_id} ({source_name}) - parallel detection followed by synthesis report.",
+    )
+
+
 def create_multi_source_detection_pipeline(
     sources_config: List[Dict[str, Any]], synthesis_instructions: str = None
 ) -> SequentialAgent:
@@ -145,6 +215,11 @@ def create_multi_source_detection_pipeline(
 
     This follows the ADK pattern from the parallel research example, where multiple independent
     agents run in parallel, then a synthesis agent combines their results.
+
+    Each source now gets its own analysis pipeline that includes:
+    1. Parallel detection (6 detectors running concurrently)
+    2. Source-specific synthesis (produces individual source reports)
+    3. Final multi-source synthesis (combines all source reports into executive summary)
 
     Parameters
     ----------
@@ -163,40 +238,74 @@ def create_multi_source_detection_pipeline(
         Sequential agent that processes all sources in parallel, then synthesizes results
     """
 
-    # Create source-specific detection agents (each runs 6 detectors in parallel)
-    source_agents = []
+    # Create source-specific detection agents (temporarily without synthesis to debug)
+    source_pipelines = []
     for config in sources_config:
-        source_agent = create_source_specific_detection_agent(
+        # Use the old working approach temporarily
+        source_pipeline = create_source_analysis_pipeline(
             source_id=config["source_id"],
             day_folder=config["day_folder"],
             datasource_folder=config["datasource_folder"],
             source_name=config.get("name", ""),
         )
-        source_agents.append(source_agent)
+        source_pipelines.append(source_pipeline)
 
-    # Create parallel agent that processes all sources simultaneously
+    # Create parallel agent that processes all source pipelines simultaneously
     multi_source_parallel_agent = ParallelAgent(
         name="MultiSourceParallelProcessor",
-        sub_agents=source_agents,
-        description=f"Processes {len(source_agents)} data sources simultaneously, each with full detection suite.",
+        sub_agents=source_pipelines,
+        description=f"Processes {len(source_pipelines)} data sources simultaneously, each with full detection + synthesis pipeline.",
     )
 
-    # Create synthesis agent with multi-source instructions
+    # Create final synthesis agent with multi-source instructions
     if synthesis_instructions is None:
         synthesis_instructions = get_default_multi_source_synthesis_instructions()
 
-    synthesis_agent = LlmAgent(
-        name="MultiSourceSynthesisAgent",
+    final_synthesis_agent = LlmAgent(
+        name="MultiSourceFinalSynthesisAgent",
         model=get_model(),
         instruction=synthesis_instructions,
-        description="Synthesizes detection results from multiple sources into comprehensive cross-source report",
+        description="Synthesizes individual source reports into comprehensive executive-level cross-source report",
     )
 
-    # Create sequential pipeline: multi-source parallel processing then synthesis
+    # Create sequential pipeline: multi-source parallel processing then final synthesis
     return SequentialAgent(
         name="MultiSourceDataQualityPipeline",
-        sub_agents=[multi_source_parallel_agent, synthesis_agent],
-        description=f"Complete data quality pipeline processing {len(source_agents)} sources independently then generating unified report.",
+        sub_agents=[multi_source_parallel_agent, final_synthesis_agent],
+        description=f"Complete data quality pipeline processing {len(source_pipelines)} sources independently with individual reports then generating unified executive report.",
+    )
+
+
+def create_single_source_complete_analysis(
+    source_id: str, day_folder: Path, datasource_folder: Path, source_name: str = ""
+) -> SequentialAgent:
+    """Create a complete single-source analysis pipeline with detection and synthesis.
+
+    This is a convenience function for analyzing a single data source with:
+    1. Parallel detection using all 6 detectors
+    2. Source synthesis to produce a comprehensive report
+
+    Parameters
+    ----------
+    source_id : str
+        The source identifier for the data source toolset
+    day_folder : Path
+        Path to the day folder containing data files
+    datasource_folder : Path
+        Path to the datasource folder containing CV files
+    source_name : str, optional
+        Human-readable name for the source (for identification)
+
+    Returns
+    -------
+    SequentialAgent
+        Complete single-source analysis pipeline
+    """
+    return create_source_analysis_pipeline(
+        source_id=source_id,
+        day_folder=day_folder,
+        datasource_folder=datasource_folder,
+        source_name=source_name,
     )
 
 
@@ -209,10 +318,14 @@ def get_default_multi_source_synthesis_instructions() -> str:
         Default synthesis instructions for cross-source analysis and reporting
     """
     return """
-MISSION: Generate an executive-level data quality monitoring report in the exact format specified, consolidating detection findings from ALL sources processed independently.
+MISSION: Generate an executive-level data quality monitoring report in the exact format specified, consolidating individual source reports from ALL sources processed independently.
 
 INPUT PROCESSING:
-You will receive detection results from multiple data sources. Each source was processed independently with its own complete set of 6 detectors (missing files, duplicates/failures, empty files, volume variations, late uploads, previous period files). Synthesize these into the EXACT format shown below.
+You will receive comprehensive source reports from multiple data sources. Each source was processed with a complete pipeline including:
+1. Parallel detection (6 detectors: missing files, duplicates/failures, empty files, volume variations, late uploads, previous period files)
+2. Source-specific synthesis (structured individual reports with issue classification and recommendations)
+
+Your task is to synthesize these individual source reports into the EXACT executive format shown below.
 
 REQUIRED REPORT FORMAT - MATCH EXACTLY:
 ```

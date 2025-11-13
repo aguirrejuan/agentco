@@ -160,15 +160,17 @@ async def _run_analysis(
         typer.echo(f"✅ Pipeline created:")
         typer.echo(f"   • {len(sources)} sources")
         typer.echo(f"   • {len(sources) * 6} detectors (6 per source)")
-        typer.echo(f"   • Executive format reports")
-        typer.echo(f"   • Parallel processing")
+        typer.echo(f"   • {len(sources)} individual synthesizers")
+        typer.echo(f"   • 1 executive synthesizer")
+        typer.echo(f"   • Parallel processing with structured reporting")
         typer.echo()
 
         logger.debug(f"✅ Pipeline created:")
         logger.debug(f"   • {len(sources)} sources")
         logger.debug(f"   • {len(sources) * 6} detectors (6 per source)")
-        logger.debug(f"   • Executive format reports")
-        logger.debug(f"   • Parallel processing")
+        logger.debug(f"   • {len(sources)} individual synthesizers")
+        logger.debug(f"   • 1 executive synthesizer")
+        logger.debug(f"   • Parallel processing with structured reporting")
 
         # Step 3: Setup ADK runner
         typer.echo("⚙️  Setting up analysis session...")
@@ -205,29 +207,64 @@ async def _run_analysis(
 
         # Step 5: Process results
         report_found = False
-        for event in events:
-            logger.debug(f"Received event: {type(event).__name__}")
-            logger.debug(f"Event content: {event}")
+        final_report = None
 
-            if (
-                event.author == "MultiSourceSynthesisAgent"
-                and event.finish_reason is not None
-            ):
-                logger.info(f"Final event from MultiSourceSynthesisAgent: {event}")
-                report = event.content.parts[0].text.strip()
-                logger.info(f"Extracted report: {report}")
-                report_found = True
+        for event in events:
+            try:
+                logger.debug(f"Received event: {type(event).__name__}")
+                if hasattr(event, "author"):
+                    logger.debug(f"Event author: {event.author}")
+
+                # Check for final synthesis agent result
+                if (
+                    hasattr(event, "author")
+                    and event.author == "MultiSourceFinalSynthesisAgent"
+                    and hasattr(event, "finish_reason")
+                    and event.finish_reason is not None
+                ):
+                    logger.info(
+                        f"Final event from MultiSourceFinalSynthesisAgent: {event}"
+                    )
+                    if (
+                        hasattr(event, "content")
+                        and event.content
+                        and event.content.parts
+                    ):
+                        final_report = event.content.parts[0].text.strip()
+                        logger.info(f"Extracted report: {final_report[:200]}...")
+                        report_found = True
+
+                # Also capture individual source synthesizer results for debugging
+                elif (
+                    hasattr(event, "author")
+                    and event.author == "SourceSynthesizer"
+                    and hasattr(event, "finish_reason")
+                    and event.finish_reason is not None
+                ):
+                    logger.debug(f"Individual source synthesizer completed")
+
+            except Exception as e:
+                logger.error(f"Error processing event: {e}")
+                logger.debug(f"Event details: {event}")
+                continue
 
         if not report_found:
             typer.echo("⚠️  No report generated. Check logs for details.", err=True)
             raise typer.Exit(1)
 
         # Output the report
-        if save_output:
+        if save_output and final_report:
             output_file = Path(f"data_quality_report_{session_id}.md")
             with open(output_file, "w", encoding="utf-8") as f:
-                f.write(report)
+                f.write(final_report)
             typer.echo(f"💾 Report saved to {output_file}")
+
+        # Display the report in the terminal
+        if final_report:
+            typer.echo("\n📋 Executive Data Quality Report:")
+            typer.echo("=" * 60)
+            typer.echo(final_report)
+            typer.echo("=" * 60)
 
         typer.echo()
         typer.echo("✅ Analysis completed successfully!")

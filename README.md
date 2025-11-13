@@ -20,6 +20,11 @@ AgentCo is an AI-powered data quality monitoring tool that analyzes data sources
   - Volume variation detection
   - Late upload detection
   - Previous period file detection
+- **Smart Synthesis**: Individual source reports plus executive summary:
+  - Source-specific synthesis after parallel detection
+  - Issue classification (Critical, Warning, Informational)
+  - Impact assessment and actionable recommendations
+  - Executive-level multi-source synthesis
 - **Executive Reports**: Generates clear, actionable reports with priority levels
 - **CLI Interface**: Easy-to-use command line tool
 - **Parallel Processing**: Efficient analysis of multiple sources simultaneously
@@ -72,16 +77,70 @@ The tool generates executive reports with three priority levels:
 - Google AI Development Kit (ADK)
 - Environment variables for AI model access
 
+## Architecture
+
+AgentCo uses a sophisticated multi-tier analysis architecture:
+
+### Analysis Pipeline
+1. **Parallel Detection**: 6 detectors run simultaneously per source
+2. **Source Synthesis**: Individual reports with structured findings
+3. **Executive Synthesis**: Cross-source executive summary
+
+### Agent Types
+- **Detector Agents**: Specialized detection for specific issue types
+- **Source Synthesizer**: Consolidates detection results into structured source reports
+- **Multi-Source Synthesizer**: Creates executive summaries from multiple source reports
+
 ## Project Structure
 
 ```
 src/agentco/
-├── cli.py              # Command line interface
-├── agents/             # Detection agents
-│   ├── detectors/      # Individual detector implementations
-│   └── factory.py      # Agent creation and configuration
-├── data/               # Data processing utilities
-└── tools.py            # Analysis tools and utilities
+├── cli.py                          # Command line interface
+├── agents/                         # Agent implementations
+│   ├── detectors/                  # Detection and synthesis agents
+│   │   ├── missing_detector_agent.py
+│   │   ├── duplicated_failed_detector_agent.py
+│   │   ├── empty_file_detector_agent.py
+│   │   ├── volume_variation_detector_agent.py
+│   │   ├── late_upload_detector_agent.py
+│   │   ├── previous_period_detector_agent.py
+│   │   └── source_synthesizer_agent.py    # NEW: Individual source synthesis
+│   ├── factory.py                  # Agent creation and pipeline configuration
+│   └── commons.py                  # Shared agent utilities
+├── data/                           # Data processing utilities
+└── tools.py                       # Analysis tools and utilities
+```
+
+## Advanced Usage
+
+### Individual Source Analysis
+```python
+from src.agentco.agents.factory import create_single_source_complete_analysis
+
+# Analyze a single source with detection + synthesis
+pipeline = create_single_source_complete_analysis(
+    source_id="220504",
+    day_folder=Path("data/2025-09-08"),
+    datasource_folder=Path("cvs/"),
+    source_name="Payments_Layout_1_V3"
+)
+```
+
+### Custom Multi-Source Pipeline
+```python
+from src.agentco.agents.factory import create_multi_source_detection_pipeline
+
+# Custom multi-source configuration
+sources = [
+    {
+        "source_id": "220504", 
+        "name": "Payments_Layout_1_V3",
+        "day_folder": Path("data/2025-09-08"),
+        "datasource_folder": Path("cvs/")
+    }
+]
+
+pipeline = create_multi_source_detection_pipeline(sources)
 ```
 
 ## License
