@@ -78,10 +78,28 @@ ANALYSIS STEPS:
    AND (is_duplicated = true OR status IN ('failure', 'stopped', 'deleted'));
 ```
 
+CRITICALITY CLASSIFICATION:
+
+🚨 **URGENT ACTION REQUIRED** - Report when:
+- Critical duplicated files blocking processing (status = 'stopped')
+- Multiple files failed with same error pattern
+- Files with status = 'failure' that prevent downstream processing
+- Any processing-blocking issues (duplicates + failures combined)
+
+⚠️ **NEEDS ATTENTION** - Report when:
+- Individual duplicate files (status = 'stopped') that need resolution
+- Failed files (status = 'failure') with non-critical errors
+- Files marked as 'deleted' that may need investigation
+
+✅ **INFORMATIONAL** - Note when:
+- All files processed successfully (status = 'processed')
+- No duplicates or failures detected
+
 OUTPUT REQUIREMENTS:
 - List each duplicate file with its occurrence count
 - For failed files, include the status_message for context
 - Indicate if duplicates are also failed (compound issue)
+- Classify findings by criticality level (Urgent/Attention/Info)
 - Specify which issues are blocking vs. informational
 """
 

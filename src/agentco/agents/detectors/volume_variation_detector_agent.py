@@ -51,36 +51,68 @@ ANALYSIS STEPS:
    ORDER BY rows DESC;
 ```
 
-3. Compare with same weekday last week (only successfully processed):
+3. **CRITICAL: Use PATTERN-based matching, NOT exact filename matching!**
+   Files with hash prefixes need pattern extraction for comparison:
 ```sql
+   -- Compare volumes by PATTERN (not exact filename) to handle hash prefixes
+   WITH today_data AS (
+       SELECT
+           REGEXP_REPLACE(REGEXP_REPLACE(filename, '^[^_]+_', ''), '_\\d{{4}}_\\d{{2}}_\\d{{2}}', '') as pattern,
+           REGEXP_EXTRACT(filename, '([A-Za-z0-9_]+)(?:_\\d{{4}}_\\d{{2}}_\\d{{2}})', 1) as entity_name,
+           filename,
+           rows as today_volume
+       FROM data
+       WHERE from = 'today' AND status IN ('processed', 'empty')
+   ),
+   lastweek_data AS (
+       SELECT
+           REGEXP_REPLACE(REGEXP_REPLACE(filename, '^[^_]+_', ''), '_\\d{{4}}_\\d{{2}}_\\d{{2}}', '') as pattern,
+           REGEXP_EXTRACT(filename, '([A-Za-z0-9_]+)(?:_\\d{{4}}_\\d{{2}}_\\d{{2}})', 1) as entity_name,
+           filename,
+           rows as lastweek_volume
+       FROM data
+       WHERE from = 'last_weekday' AND status IN ('processed', 'empty')
+   )
    SELECT
-       t.filename,
-       t.rows as today_volume,
-       l.rows as lastweek_volume,
-       ROUND(((t.rows - l.rows) * 100.0 / NULLIF(l.rows, 0)), 2) as pct_change,
-       ABS(t.rows - l.rows) as abs_difference
-   FROM
-       (SELECT * FROM data WHERE from = 'today' AND status IN ('processed', 'empty')) t
-   INNER JOIN
-       (SELECT * FROM data WHERE from = 'last_weekday' AND status IN ('processed', 'empty')) l
-   ON t.filename = l.filename
-   WHERE l.rows > 0;
+       t.filename as today_filename,
+       t.entity_name,
+       t.pattern,
+       t.today_volume,
+       l.lastweek_volume,
+       ROUND(((t.today_volume - l.lastweek_volume) * 100.0 / NULLIF(l.lastweek_volume, 0)), 2) as pct_change,
+       ABS(t.today_volume - l.lastweek_volume) as abs_difference
+   FROM today_data t
+   INNER JOIN lastweek_data l ON t.pattern = l.pattern
+   WHERE l.lastweek_volume > 0;
 ```
 
-4. Identify significant variations (>50% change):
+4. Identify significant variations (>50% change) with entity extraction:
 ```sql
+   WITH today_data AS (
+       SELECT
+           REGEXP_REPLACE(REGEXP_REPLACE(filename, '^[^_]+_', ''), '_\\d{{4}}_\\d{{2}}_\\d{{2}}', '') as pattern,
+           REGEXP_EXTRACT(filename, '([A-Za-z0-9_]+)(?:_\\d{{4}}_\\d{{2}}_\\d{{2}})', 1) as entity_name,
+           filename,
+           rows as today_volume
+       FROM data
+       WHERE from = 'today' AND status IN ('processed', 'empty')
+   ),
+   lastweek_data AS (
+       SELECT
+           REGEXP_REPLACE(REGEXP_REPLACE(filename, '^[^_]+_', ''), '_\\d{{4}}_\\d{{2}}_\\d{{2}}', '') as pattern,
+           rows as lastweek_volume
+       FROM data
+       WHERE from = 'last_weekday' AND status IN ('processed', 'empty')
+   )
    SELECT
-       t.filename,
-       t.rows as today_volume,
-       l.rows as lastweek_volume,
-       ROUND(((t.rows - l.rows) * 100.0 / NULLIF(l.rows, 0)), 2) as pct_change
-   FROM
-       (SELECT * FROM data WHERE from = 'today' AND status IN ('processed', 'empty')) t
-   INNER JOIN
-       (SELECT * FROM data WHERE from = 'last_weekday' AND status IN ('processed', 'empty')) l
-   ON t.filename = l.filename
-   WHERE l.rows > 0
-   AND ABS(((t.rows - l.rows) * 100.0 / NULLIF(l.rows, 0))) > 50;
+       t.entity_name,
+       t.today_volume,
+       l.lastweek_volume,
+       ROUND(((t.today_volume - l.lastweek_volume) * 100.0 / NULLIF(l.lastweek_volume, 0)), 2) as pct_change
+   FROM today_data t
+   INNER JOIN lastweek_data l ON t.pattern = l.pattern
+   WHERE l.lastweek_volume > 0
+     AND ABS(((t.today_volume - l.lastweek_volume) * 100.0 / NULLIF(l.lastweek_volume, 0))) > 50;
 ```
 
 ANOMALY DETECTION RULES:
@@ -99,11 +131,57 @@ THRESHOLDS:
 - ⚠️ WARNING: 50-100% increase or 50-80% decrease
 - ✅ NORMAL: <50% variation
 
+CRITICALITY CLASSIFICATION:
+
+🚨 **URGENT ACTION REQUIRED** - Report when:
+- Volume changes >100% increase from normal baseline
+- Volume changes >80% decrease from normal baseline
+- Multiple files showing critical variations (processing anomaly)
+- Significant volume deviations outside documented ranges
+
+⚠️ **NEEDS ATTENTION** - Report when:
+- Volume variations 50-100% increase from same weekday last week
+- Volume variations 50-80% decrease from same weekday last week
+- Single files with significant but explainable variations
+- Volumes outside expected ranges but within business tolerance
+
+✅ **INFORMATIONAL** - Note when:
+- Volumes within ±50% of normal baseline
+- Variations within documented acceptable ranges
+- Expected volume patterns (weekend, end-of-month, etc.)
+
+CV VOLUME RANGE ANALYSIS:
+**CRITICAL: Always read the data source CV first!**
+The CV documents expected volume ranges, such as:
+- "usual Monday 40k-55k records"
+- "typical range 800k-900k"
+- "95% confidence band: 50,211-869,600"
+- "expected volume >1000 records"
+
+Extract these ranges from the CV and use them to contextualize variations:
+- Compare actual volume to documented expected ranges
+- Note if volume exceeds confidence bands or typical bounds
+- Reference day-of-week patterns (Monday volumes vs Tuesday, etc.)
+
+ENTITY EXTRACTION:
+Extract entity names from filenames to provide specific reporting:
+- ClienX, Saipos, Clien_CBK, WhiteLabel, Shop, Google, etc.
+- Report as: "EntityName volume X (comparison to baseline)"
+
+REPORTING FORMAT EXAMPLES:
+- "ClienX volume 61,639 (> usual Monday 40k–55k)"
+- "ClienX volume 56,277 (>95% bound 50,211)"
+- "ClienX 1,023,337 (>95% band 869,600)"
+- "Volume decreased 75% from last week (5,000 vs 20,000)"
+
 OUTPUT REQUIREMENTS:
 - Only files with SIGNIFICANT unexpected variations (>50% change)
-- Include both today's and last week's volumes
-- Calculate and report percentage change
-- Classify severity based on thresholds above
+- Extract and include entity names in reports (e.g., "ClienX volume...")
+- Include both today's volume and comparison baseline
+- Reference CV-documented expected ranges when available (e.g., "usual Monday 40k-55k")
+- Calculate and report percentage change when not using CV ranges
+- Note if volume exceeds confidence bands or statistical bounds
+- Classify findings by criticality level (Urgent/Attention/Info)
 - Consider documented volume ranges from CV
 """
 

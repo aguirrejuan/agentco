@@ -101,9 +101,28 @@ CLASSIFICATION:
 - Should be tracked but not flagged as urgent
 - May indicate system recovery or data reconciliation
 
+CRITICALITY CLASSIFICATION:
+
+🚨 **URGENT ACTION REQUIRED** - Report when:
+- Previous period files blocking current processing
+- Historical backfills causing data integrity issues
+- Old files interfering with current day operations
+
+⚠️ **NEEDS ATTENTION** - Report when:
+- Recent backfills (1-2 days old) that need tracking
+- Previous period files that may indicate missed processing
+- Pattern of repeated historical uploads suggesting system issues
+
+✅ **INFORMATIONAL** - Note when:
+- Previous period files (informational only)
+- Historical backfills (>7 days old) for data reconciliation
+- Manual uploads outside ECD windows (expected behavior)
+- Intentional corrections or reprocessing
+
 OUTPUT REQUIREMENTS:
 - List files with period mismatch
 - Include how many days old the data is
+- Classify findings by criticality level (Urgent/Attention/Info)
 - Note they are informational/manual uploads
 - Distinguish between recent backfills (1-2 days) vs. historical (>7 days)
 """

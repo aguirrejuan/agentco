@@ -272,7 +272,10 @@ def create_multi_source_detection_pipeline(
     ]
     source_reports_section = "\n".join(
         [
-            f"- **Source {config['source_id']} ({config.get('name', 'Unknown')})**: {{source_report_{config['source_id']}}}"
+            f"""- **Source {config['source_id']} ({config.get('name', 'Unknown')})**: 
+{{source_report_{config['source_id']}}}
+
+"""
             for config in sources_config
         ]
     )
@@ -282,7 +285,10 @@ INPUT CONTEXT:
 You will receive individual source reports from multiple data sources that have been analyzed independently. Each source went through parallel detection and individual synthesis.
 
 **Individual Source Reports:**
+
+<individual_source_reports>
 {source_reports_section}
+</individual_source_reports>
 
 {synthesis_instructions}
 """

@@ -50,33 +50,91 @@ ANALYSIS STEPS:
    ORDER BY uploaded_at;
 ```
 
-3. Compare with typical arrival times:
+3. **CRITICAL: Use PATTERN-based matching for files with hash prefixes:**
 ```sql
-   SELECT 
+   -- Compare upload times by PATTERN (not exact filename)
+   WITH today_data AS (
+       SELECT
+           REGEXP_REPLACE(REGEXP_REPLACE(filename, '^[^_]+_', ''), '_\\d{{4}}_\\d{{2}}_\\d{{2}}', '') as pattern,
+           REGEXP_EXTRACT(filename, '([A-Za-z0-9_]+)(?:_\\d{{4}}_\\d{{2}}_\\d{{2}})', 1) as entity_name,
+           filename,
+           uploaded_at as today_time
+       FROM data
+       WHERE from = 'today'
+   ),
+   lastweek_data AS (
+       SELECT
+           REGEXP_REPLACE(REGEXP_REPLACE(filename, '^[^_]+_', ''), '_\\d{{4}}_\\d{{2}}_\\d{{2}}', '') as pattern,
+           uploaded_at as lastweek_time
+       FROM data
+       WHERE from = 'last_weekday'
+   )
+   SELECT
+       t.entity_name,
        t.filename,
-       t.uploaded_at as today_time,
-       l.uploaded_at as lastweek_time,
-       ROUND(EXTRACT(EPOCH FROM (t.uploaded_at::timestamp - l.uploaded_at::timestamp))/3600, 2) as hour_difference
-   FROM 
-       (SELECT * FROM data WHERE from = 'today') t
-   INNER JOIN 
-       (SELECT * FROM data WHERE from = 'last_weekday') l
-   ON t.filename = l.filename;
+       t.today_time,
+       l.lastweek_time,
+       ROUND(EXTRACT(EPOCH FROM (t.today_time - l.lastweek_time))/3600, 2) as hour_difference
+   FROM today_data t
+   INNER JOIN lastweek_data l ON t.pattern = l.pattern;
 ```
 
-4. Identify significantly late files:
+4. Identify LATE files (>4 hours after expected):
 ```sql
-   SELECT 
+   WITH today_data AS (
+       SELECT
+           REGEXP_REPLACE(REGEXP_REPLACE(filename, '^[^_]+_', ''), '_\\d{{4}}_\\d{{2}}_\\d{{2}}', '') as pattern,
+           REGEXP_EXTRACT(filename, '([A-Za-z0-9_]+)(?:_\\d{{4}}_\\d{{2}}_\\d{{2}})', 1) as entity_name,
+           filename,
+           uploaded_at as today_time
+       FROM data
+       WHERE from = 'today'
+   ),
+   lastweek_data AS (
+       SELECT
+           REGEXP_REPLACE(REGEXP_REPLACE(filename, '^[^_]+_', ''), '_\\d{{4}}_\\d{{2}}_\\d{{2}}', '') as pattern,
+           uploaded_at as lastweek_time
+       FROM data
+       WHERE from = 'last_weekday'
+   )
+   SELECT
+       t.entity_name,
        t.filename,
-       t.uploaded_at as today_time,
-       l.uploaded_at as lastweek_time,
-       ROUND(EXTRACT(EPOCH FROM (t.uploaded_at::timestamp - l.uploaded_at::timestamp))/3600, 2) as hour_difference
-   FROM 
-       (SELECT * FROM data WHERE from = 'today') t
-   INNER JOIN 
-       (SELECT * FROM data WHERE from = 'last_weekday') l
-   ON t.filename = l.filename
-   WHERE EXTRACT(EPOCH FROM (t.uploaded_at::timestamp - l.uploaded_at::timestamp))/3600 > 4;
+       t.today_time,
+       l.lastweek_time,
+       ROUND(EXTRACT(EPOCH FROM (t.today_time - l.lastweek_time))/3600, 2) as hour_difference
+   FROM today_data t
+   INNER JOIN lastweek_data l ON t.pattern = l.pattern
+   WHERE EXTRACT(EPOCH FROM (t.today_time - l.lastweek_time))/3600 > 4;
+```
+
+5. Identify EARLY files (arriving significantly earlier than expected):
+```sql
+   WITH today_data AS (
+       SELECT
+           REGEXP_REPLACE(REGEXP_REPLACE(filename, '^[^_]+_', ''), '_\\d{{4}}_\\d{{2}}_\\d{{2}}', '') as pattern,
+           REGEXP_EXTRACT(filename, '([A-Za-z0-9_]+)(?:_\\d{{4}}_\\d{{2}}_\\d{{2}})', 1) as entity_name,
+           filename,
+           uploaded_at as today_time
+       FROM data
+       WHERE from = 'today'
+   ),
+   lastweek_data AS (
+       SELECT
+           REGEXP_REPLACE(REGEXP_REPLACE(filename, '^[^_]+_', ''), '_\\d{{4}}_\\d{{2}}_\\d{{2}}', '') as pattern,
+           uploaded_at as lastweek_time
+       FROM data
+       WHERE from = 'last_weekday'
+   )
+   SELECT
+       t.entity_name,
+       t.filename,
+       t.today_time,
+       l.lastweek_time,
+       ROUND(EXTRACT(EPOCH FROM (l.lastweek_time - t.today_time))/3600, 2) as hours_early
+   FROM today_data t
+   INNER JOIN lastweek_data l ON t.pattern = l.pattern
+   WHERE EXTRACT(EPOCH FROM (l.lastweek_time - t.today_time))/3600 > 4;
 ```
 
 DETECTION CRITERIA:
@@ -97,10 +155,69 @@ DO NOT FLAG:
 - Manual/historical uploads (these are expected to be off-schedule)
 - Files arriving early (note separately as informational)
 
+CRITICALITY CLASSIFICATION:
+
+🚨 **URGENT ACTION REQUIRED** - Report when:
+- Multiple files arriving significantly late (>8 hours delay)
+- Late files that cause downstream processing failures
+- Critical time-sensitive files missing their processing windows
+
+⚠️ **NEEDS ATTENTION** - Report when:
+- Files arriving >4 hours later than expected schedule window
+- Significant delay compared to historical same-weekday arrivals
+- Schedule changes or timing anomalies that need confirmation
+- Late arrivals that may impact downstream processing
+
+✅ **INFORMATIONAL** - Note when:
+- Files arriving within expected timing windows (<4 hour delay)
+- Files arriving early (schedule changes to monitor)
+- Delays that don't impact downstream processing
+
+CV SCHEDULE ANALYSIS:
+**CRITICAL: Always read the data source CV first!**
+The CV documents expected arrival schedules, such as:
+- Expected time windows (e.g., "08:08-08:18 UTC")
+- Typical arrival times (e.g., "usual ~17:20 UTC")
+- Day-of-week patterns (weekdays vs weekends)
+- Timezone specifications
+
+Use the CV to:
+1. Identify expected arrival times for each file/entity
+2. Calculate delays relative to documented schedules (not just last week)
+3. Distinguish between:
+   - Files arriving within expected window (normal)
+   - Files arriving late (>4 hours past expected window)
+   - Files arriving early (significantly before expected time - may indicate schedule change)
+
+ENTITY EXTRACTION:
+Extract entity names from filenames to provide specific reporting:
+- Saipos, ClienX, Clien_CBK, WhiteLabel, Shop, Google, etc.
+- Report as: "EntityName file delivered..."
+
+REPORTING FORMAT EXAMPLES:
+
+**For Early Arrivals (INFORMATIONAL):**
+- "Saipos file delivered early at 08:06 UTC (usual ~17:20) — Confirm schedule change; adjust downstream triggers if needed"
+- "ClienX arrived 9 hours early at 06:15 UTC (expected ~15:00)"
+
+**For Late Arrivals (NEEDS ATTENTION):**
+- "Saipos file arrived 4.2 hours late at 12:20 UTC (expected 08:08 UTC)"
+- "ClienX delayed 6.5 hours, uploaded at 14:38 UTC (expected 08:08-08:18 UTC window)"
+
+**Note Schedule Change Implications:**
+- Early arrivals: "Confirm schedule change; adjust downstream triggers if needed"
+- Late arrivals: "Validate downstream completed; track if persists"
+- Persistent timing changes: "Confirm intentional lag change; keep a short-term volume watch"
+
 OUTPUT REQUIREMENTS:
 - Files with >4 hour delay, sorted by severity of delay
-- Include actual upload time vs. expected time
-- Calculate delay in hours
+- Files arriving significantly early (>4 hours early) - note as schedule change
+- Extract and include entity names (e.g., "Saipos file delivered...")
+- Include actual upload time vs. expected time (from CV or historical)
+- Calculate delay/early arrival in hours
+- Reference expected time windows from CV documentation
+- Suggest actions based on timing change type
+- Classify findings by criticality level (Urgent/Attention/Info)
 - Note if this is consistently late or a one-time issue
 """
 

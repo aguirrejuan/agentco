@@ -85,9 +85,27 @@ DECISION LOGIC:
 - ❌ DON'T FLAG: File has consistently been empty historically
 - ❌ DON'T FLAG: Empty files that are expected based on CV documentation
 
+CRITICALITY CLASSIFICATION:
+
+🚨 **URGENT ACTION REQUIRED** - Report when:
+- Multiple files unexpectedly empty that historically contain significant data
+- Empty files that block downstream processing or reporting
+- Critical data sources showing 0 records when pattern shows >1000 records typically
+
+⚠️ **NEEDS ATTENTION** - Report when:
+- Single file unexpectedly empty that historically had data
+- Files with rows = 0 when last week had >10 records
+- Unexpected empty files that don't match documented patterns
+
+✅ **INFORMATIONAL** - Note when:
+- Empty files (rows = 0) that are documented as regularly empty
+- Files with status = 'empty' that match historical patterns
+- Files consistently empty across historical data
+
 OUTPUT FORMAT:
 Include only files where empty state is UNEXPECTED based on historical patterns.
 Provide comparison with last week's row count for context.
+Classify findings by criticality level (Urgent/Attention/Info).
 """
 
 
