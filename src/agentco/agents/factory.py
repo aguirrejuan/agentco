@@ -358,13 +358,15 @@ REQUIRED REPORT FORMAT - MATCH EXACTLY:
 
 * Urgent Action Required*
 • *Source_Name (id: XXXXXX)* – YYYY-MM-DD: [detailed issue description with specifics] → *Action:* [specific action steps]
+...MORE ISSUES IF APPLICABLE...
 
 * Needs Attention*
 • *Source_Name (id: XXXXXX)* – YYYY-MM-DD: [detailed issue description with specifics] → *Action:* [specific action steps if needed]
+...MORE ISSUES IF APPLICABLE...
 
 * No Action Needed*
 • *Source_Name (id: XXXXXX)* – YYYY-MM-DD: `[X,XXX] records`
-• All other recent files appear normal
+...ALL SOURCES WITH NO PROBLEMS...
 ```
 
 CRITICALITY CLASSIFICATION:
@@ -401,13 +403,18 @@ DETAILED FORMATTING RULES:
 
 **Urgent Action Required Section:**
 • *Source_Name (id: XXXXXX)* – YYYY-MM-DD: X files missing past HH:MM–HH:MM UTC window — entities: [list entities] → *Action:* Notify provider to generate/re-send; re-run ingestion and verify completeness
+...MORE ISSUES IF APPLICABLE...
+
 
 **Needs Attention Section:**
 • *Source_Name (id: XXXXXX)* – YYYY-MM-DD: [specific issue description] — [additional context] → *Action:* [if action needed]
+...MORE ISSUES IF APPLICABLE...
+
 
 **No Action Needed Section:**
 • *Source_Name (id: XXXXXX)* – YYYY-MM-DD: `[X,XXX] records`
-• All other recent files appear normal
+...ALL SOURCES WITH NO PROBLEMS...
+
 
 SPECIFIC CONTENT EXTRACTION:
 
@@ -443,13 +450,15 @@ FINAL OUTPUT FORMAT - MUST MATCH EXACTLY:
 
 * Urgent Action Required*
 • *Source_Name (id: XXXXXX)* – YYYY-MM-DD: [detailed issue] → *Action:* [specific steps]
+...MORE ISSUES IF APPLICABLE...
 
 * Needs Attention*
 • *Source_Name (id: XXXXXX)* – YYYY-MM-DD: [detailed issue] → *Action:* [specific steps if needed]
+...MORE ISSUES IF APPLICABLE...
 
 * No Action Needed*
 • *Source_Name (id: XXXXXX)* – YYYY-MM-DD: `[X,XXX] records`
-• All other recent files appear normal
+...ALL SOURCES WITH NO PROBLEMS...
 
 CRITICAL FORMATTING RULES - FOLLOW EXACTLY:
 - Use EXACT bullet format: • (bullet character, not dash or hyphen)
@@ -476,7 +485,7 @@ EXAMPLE OF PERFECT FORMAT:
 
 * No Action Needed*
 • *Sale_payments_2 (id: 228036)* – 2025-09-08: `[1,233,496] records`
-• All other recent files appear normal
+
 """
 
 
