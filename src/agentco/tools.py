@@ -151,7 +151,7 @@ class DataSourceToolset(BaseToolset):
             self._query_today_data_tool,
             self._query_today_and_last_weekday_data_tool,
             self._read_data_source_cv_tool,
-            # self._validate_data_quality_tool,
+            self._validate_data_quality_tool,
         ]
 
     def query_today_data(self, sql_query: str) -> str:

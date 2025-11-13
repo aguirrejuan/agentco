@@ -231,6 +231,7 @@ def create_source_synthesizer_agent(
         model=get_model(),
         tools=[],  # No tools needed - reading from session state
         planner=planner,
+        include_contents="none",
         instruction=formatted_instruction,  # Session state will be injected automatically
         output_schema=SourceSynthesizerOutputSchema,
         output_key=output_key,  # Store result in session state if key provided
