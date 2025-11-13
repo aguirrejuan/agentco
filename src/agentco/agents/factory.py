@@ -293,6 +293,7 @@ You will receive individual source reports from multiple data sources that have 
         name="MultiSourceFinalSynthesisAgent",
         model=get_model(),
         instruction=dynamic_instruction,
+        include_contents="none",
         description="Synthesizes individual source reports into comprehensive executive-level cross-source report",
     )
 
