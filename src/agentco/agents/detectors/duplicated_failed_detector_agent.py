@@ -81,6 +81,8 @@ OUTPUT REQUIREMENTS:
 class DuplicatedAndFailedFileOutputSchema(BaseModel):
     """Schema for duplicated and failed file detection results."""
 
+    source_id: str
+    source_name: str
     duplicated_files: list[str]
     failed_files: list[str]
     total_issues: int

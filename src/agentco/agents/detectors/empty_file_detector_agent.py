@@ -81,6 +81,8 @@ Provide comparison with last week's row count for context.
 class UnexpectedEmptyFileOutputSchema(BaseModel):
     """Schema for unexpected empty file detection results."""
 
+    source_id: str
+    source_name: str
     empty_files: list[str]
     total_empty_files: int
     details: str

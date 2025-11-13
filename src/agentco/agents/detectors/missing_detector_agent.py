@@ -77,6 +77,8 @@ OUTPUT REQUIREMENTS:
 class MissingFileOutputSchema(BaseModel):
     """Schema for missing file detection results."""
 
+    source_id: str
+    source_name: str
     missing_files: list[str]
     missing_files_number: int
     late_files: list[str]

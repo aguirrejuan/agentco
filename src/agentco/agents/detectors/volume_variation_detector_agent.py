@@ -97,6 +97,8 @@ OUTPUT REQUIREMENTS:
 class UnexpectedVolumeVariationOutputSchema(BaseModel):
     """Schema for unexpected volume variation detection results."""
 
+    source_id: str
+    source_name: str
     unexpected_volume_files: list[str]
     total_unexpected_volume_files: int
     details: str

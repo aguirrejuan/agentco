@@ -99,6 +99,8 @@ OUTPUT REQUIREMENTS:
 class UploadOfPreviousFileOutputSchema(BaseModel):
     """Schema for previous period file upload detection results."""
 
+    source_id: str
+    source_name: str
     previous_period_files: list[str]
     total_previous_period_files: int
     details: str

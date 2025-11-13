@@ -95,6 +95,8 @@ OUTPUT REQUIREMENTS:
 class FileUploadAfterScheduleOutputSchema(BaseModel):
     """Schema for late file upload detection results."""
 
+    source_id: str
+    source_name: str
     files_uploaded_after_schedule: list[str]
     total_files_uploaded_after_schedule: int
     details: str
