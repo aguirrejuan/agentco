@@ -124,4 +124,5 @@ def create_upload_of_previous_file_detector_agent(tools: List[Any]) -> LlmAgent:
         planner=planner,
         instruction=PROMPT_TEMPLATE.format(COMMON_INSTRUCTIONS=COMMON_INSTRUCTIONS),
         output_schema=UploadOfPreviousFileOutputSchema,
+        output_key="previous_period_results",  # Store results in session state
     )

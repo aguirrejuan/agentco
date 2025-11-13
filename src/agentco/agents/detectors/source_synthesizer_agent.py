@@ -26,13 +26,11 @@ PROMPT_TEMPLATE = """
 MISSION: Synthesize detection results from all parallel detectors for this specific source and produce a comprehensive brief report.
 
 INPUT CONTEXT:
-You will receive results from 6 parallel detectors that have analyzed the same data source:
-1. Missing File Detector - identifies files that weren't received or arrived late
-2. Duplicated/Failed File Detector - finds duplicate or failed processing files  
-3. Empty File Detector - detects files that are unexpectedly empty
-4. Volume Variation Detector - identifies unusual record count changes
-5. Late Upload Detector - finds files uploaded after expected schedule
-6. Previous Period Detector - identifies files from previous periods being re-uploaded
+You will receive results from 6 parallel detectors that have analyzed the same data source. The detectors run first and their results should be available in the conversation context.
+
+Your job is to synthesize the detection findings from the previous agents in this pipeline into a comprehensive report. 
+
+IMPORTANT: The parallel detectors have already completed their analysis. Look for their structured output in the conversation history above this message.
 
 SYNTHESIS REQUIREMENTS:
 Analyze all detector results and produce a structured report that includes:
@@ -174,18 +172,23 @@ def create_source_synthesizer_agent(tools: List[Any]) -> LlmAgent:
     Parameters
     ----------
     tools : List[Any]
-        List of tools to be used by the agent
+        List of tools to be used by the agent (may be None for synthesis-only operation)
 
     Returns
     -------
     LlmAgent
         Configured agent for synthesizing detection results into a source report
     """
+    # Pre-format the template with COMMON_INSTRUCTIONS to avoid conflicts with session state injection
+    formatted_instruction = PROMPT_TEMPLATE.format(
+        COMMON_INSTRUCTIONS=COMMON_INSTRUCTIONS
+    )
+
     return LlmAgent(
         name="SourceSynthesizer",
         model=get_model(),
-        tools=tools,
+        tools=tools or [],  # Use empty list if no tools provided
         planner=planner,
-        instruction=PROMPT_TEMPLATE.format(COMMON_INSTRUCTIONS=COMMON_INSTRUCTIONS),
+        instruction=formatted_instruction,  # Use pre-formatted instruction
         output_schema=SourceSynthesizerOutputSchema,
     )

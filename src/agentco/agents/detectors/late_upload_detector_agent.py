@@ -120,4 +120,5 @@ def create_file_upload_after_schedule_detector_agent(tools: List[Any]) -> LlmAge
         planner=planner,
         instruction=PROMPT_TEMPLATE.format(COMMON_INSTRUCTIONS=COMMON_INSTRUCTIONS),
         output_schema=FileUploadAfterScheduleOutputSchema,
+        output_key="late_upload_results",  # Store results in session state
     )

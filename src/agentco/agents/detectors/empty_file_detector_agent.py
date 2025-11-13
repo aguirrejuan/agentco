@@ -106,4 +106,5 @@ def create_unexpected_empty_file_detector_agent(tools: List[Any]) -> LlmAgent:
         planner=planner,
         instruction=PROMPT_TEMPLATE.format(COMMON_INSTRUCTIONS=COMMON_INSTRUCTIONS),
         output_schema=UnexpectedEmptyFileOutputSchema,
+        output_key="empty_file_results",  # Store results in session state
     )

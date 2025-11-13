@@ -107,4 +107,5 @@ def create_duplicated_and_failed_file_detector_agent(tools: List[Any]) -> LlmAge
         planner=planner,
         instruction=PROMPT_TEMPLATE.format(COMMON_INSTRUCTIONS=COMMON_INSTRUCTIONS),
         output_schema=DuplicatedAndFailedFileOutputSchema,
+        output_key="duplicated_failed_results",  # Store results in session state
     )

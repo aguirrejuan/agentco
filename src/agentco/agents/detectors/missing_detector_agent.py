@@ -103,4 +103,5 @@ def create_missing_file_detector_agent(tools: List[Any]) -> LlmAgent:
         planner=planner,
         instruction=PROMPT_TEMPLATE.format(COMMON_INSTRUCTIONS=COMMON_INSTRUCTIONS),
         output_schema=MissingFileOutputSchema,
+        output_key="missing_file_results",  # Store results in session state
     )

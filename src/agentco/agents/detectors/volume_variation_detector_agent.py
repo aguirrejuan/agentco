@@ -122,4 +122,5 @@ def create_unexpected_volume_variation_detector_agent(tools: List[Any]) -> LlmAg
         planner=planner,
         instruction=PROMPT_TEMPLATE.format(COMMON_INSTRUCTIONS=COMMON_INSTRUCTIONS),
         output_schema=UnexpectedVolumeVariationOutputSchema,
+        output_key="volume_variation_results",  # Store results in session state
     )
