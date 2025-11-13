@@ -23,68 +23,152 @@ planner = BuiltInPlanner(thinking_config=thinking_config)
 PROMPT_TEMPLATE = """
 {COMMON_INSTRUCTIONS}
 
-MISSION: Synthesize detection results from all parallel detectors for this specific source and produce a comprehensive brief report.
+MISSION: Synthesize detection results from all 6 parallel detectors for THIS SPECIFIC SOURCE into a structured single-source report that will be consumed by the final multi-source executive report generator.
+
+**CRITICAL UNDERSTANDING**:
+- You are analyzing ONE data source only
+- Your output will be combined with OTHER source reports by a final synthesizer
+- The final synthesizer needs specific fields from you in exact formats
+- Your "Summary Line" will become a bullet point in the final executive report
 
 INPUT CONTEXT:
-You will receive results from 6 parallel detectors that have analyzed the same data source and stored their findings in session state.
+You will receive results from 6 parallel detectors that have analyzed the SAME data source and stored their findings in session state.
 
 **Detection Results Available:**
 
 
-Your job is to synthesize these detection findings into a comprehensive report.
+Your job is to synthesize these detection findings into a source-specific report using the three-tier classification system that aligns with the final report structure.
+
+CRITICALITY CLASSIFICATION (MUST ALIGN WITH FINAL REPORT):
+
+🚨 **URGENT ACTION REQUIRED** - Sources with:
+- 2+ files missing from same source
+- Critical duplicated/failed files blocking processing
+- Volume changes >100% increase or >80% decrease
+- Multiple files failed with same error pattern
+- Any processing-blocking issues
+
+⚠️ **NEEDS ATTENTION** - Sources with:
+- 1 file missing past expected window
+- Volume variations 50-100% from normal
+- Files arriving significantly late (>4 hours)
+- Unexpected empty files that historically had data
+- Schedule changes or timing anomalies
+
+✅ **NO ACTION NEEDED** - Sources with:
+- All files received and processed normally
+- Volumes within acceptable ranges (±50%)
+- No duplicates, failures, or timing issues
+- Previous period uploads (informational only)
 
 SYNTHESIS REQUIREMENTS:
 Analyze all detector results and produce a structured report that includes:
 
 1. **Source Summary**: Source ID, name, and processing date
-2. **Issue Classification**: Categorize findings by severity (Critical, Warning, Info)
-3. **Key Findings**: Consolidate related issues and remove duplicates
-4. **Impact Assessment**: Evaluate business impact of identified issues
-5. **Recommended Actions**: Provide specific actionable recommendations
+2. **Criticality Level**: Determine the highest severity level (Urgent/Attention/Normal)
+3. **Key Findings**: Consolidate related issues with specific details
+4. **Total Record Count**: If normal operations, provide total records processed
+5. **Recommended Actions**: Specific actionable recommendations (only for Urgent/Attention)
 
 REPORT STRUCTURE:
 ```
-# Report for Source ID: 'source_id', Name: 'source_name'
-Date: 'processing_date'
+## Source: [source_name] (id: [source_id])
+**Date**: [processing_date]
+**Criticality Level**: [URGENT ACTION REQUIRED | NEEDS ATTENTION | NO ACTION NEEDED]
 
-## Issue Summary
-- Critical Issues: 'count'
-- Warnings: 'count'
-- Informational: 'count'
+### Summary Line
+**CRITICAL**: This line will become the bullet point content in the final executive report.
+Format: • *[source_name] (id: [source_id])* – [date]: [your summary line here]
 
-## Critical Issues
-[List critical issues that require immediate action]
-- Missing Files: [details with file names, expected times]
-- Failed Processing: [details with failure reasons]
-- Data Integrity: [details of corruption or significant anomalies]
+Your summary line must be:
+- Concise and specific (one line only)
+- Include key details: counts, time windows, entity names, volumes
+- Match the exact format patterns below:
 
-## Warnings  
-[List issues that need attention but are not blocking]
-- Late Deliveries: [details with delay times]
-- Volume Changes: [details with percentage changes]
-- Schedule Variations: [details of timing anomalies]
+**For URGENT issues (missing files)**:
+"14 files missing past 08:08–08:18 UTC window — entities: Clien_CBK, WhiteLabel, Shop, Google..."
+"2 files missing past 08:02–08:11 UTC — expected: *_Clien_Debito_payments_accounting_report_2025_09_07.csv; *_Clien_MVP_payments_accounting_report_2025_09_07.csv"
 
-## Informational
-[List items for awareness but no action required]
-- Previous Period Files: [details if any]
-- Normal Operations: [confirmation of successful processing]
+**For ATTENTION issues (volume/timing)**:
+"ClienX volume 61,639 (> usual Monday 40k–55k)"
+"ClienX volume 56,277 (>95% bound 50,211)"
+"Saipos file delivered early at 08:06 UTC (usual ~17:20)"
+"ClienX 1,023,337 (>95% band 869,600) and lag shifted to near-real-time"
 
-## Impact Assessment
-[Assess business impact and downstream effects]
+**For NORMAL operations**:
+"`[1,233,496] records`"
 
-## Recommended Actions
-[Specific actionable recommendations with priority]
-1. Immediate: [urgent actions]
-2. Short-term: [actions within 24-48 hours]  
-3. Monitoring: [what to watch for next processing cycle]
+DO NOT include source name or ID in your summary line - the final synthesizer adds that.
+
+### Detailed Findings
+[Specific details organized by issue type]
+
+**Missing Files** (if any):
+- Count: [X files missing]
+- Time Window: [expected arrival window, e.g., "08:08-08:18 UTC"]
+- Entities Affected: [list entities: Clien_CBK, WhiteLabel, Shop, etc.]
+- Expected Filenames: [use * or [hash] for variable prefixes]
+
+**Failed/Duplicate Files** (if any):
+- Specific files and error patterns
+- Processing status (failure, stopped, deleted)
+
+**Volume Variations** (if any):
+- Entity name and volume with comparison
+- Format: "EntityName volume X (comparison to baseline)"
+- Reference CV ranges when available
+
+**Late/Early Uploads** (if any):
+- Entity name and timing details
+- Actual vs expected time
+- Hours delayed/early
+
+**Empty Files** (if any):
+- Files unexpectedly empty
+- Historical comparison
+
+**Previous Period Files** (if any):
+- Informational only - note age and context
+
+### Total Records
+[If normal operations]: `[X,XXX] records`
+
+### Recommended Action
+[Only for URGENT or NEEDS ATTENTION - leave empty for NO ACTION NEEDED]
+**CRITICAL**: Use EXACT action templates that match issue type:
+
+**For Missing Files (URGENT)**:
+"Notify provider to generate/re-send; re-run ingestion and verify completeness"
+
+**For Volume Anomalies (ATTENTION)**:
+"Confirm coverage/window; monitor next run"
+
+**For Early/Late Uploads (ATTENTION)**:
+"Confirm schedule change; adjust downstream triggers if needed"
+"Validate downstream completed; track if persists"
+"Confirm intentional lag change; keep a short-term volume watch"
+
+**For NO ACTION NEEDED**:
+Leave blank or state "None"
+
+Format in final report: → *Action:* [your recommended action]
 ```
 
 ANALYSIS GUIDELINES:
 
-**Issue Classification:**
-- **Critical**: Missing files, failed processing, data corruption, processing blocks
-- **Warning**: Late files (>4h delay), volume changes >50%, schedule anomalies
-- **Info**: Normal operations, previous period uploads (if not blocking), minor variations
+**Determine Criticality Level:**
+1. Check all detector results
+2. Identify the HIGHEST severity issue found
+3. Classify the entire source based on that level
+4. Use the classification criteria above
+
+**Issue Classification By Detector:**
+- **Missing Files**: URGENT if 2+, ATTENTION if 1
+- **Duplicates/Failures**: URGENT if blocking processing, ATTENTION otherwise
+- **Volume Variations**: URGENT if >100% increase or >80% decrease, ATTENTION if 50-100%
+- **Late Uploads**: ATTENTION (files >4 hours late), INFORMATIONAL if early arrivals
+- **Empty Files**: URGENT if multiple critical files, ATTENTION if single file
+- **Previous Period**: Usually INFORMATIONAL unless blocking
 
 **Consolidation Logic:**
 - Group related issues (e.g., multiple missing files from same entity)
@@ -105,66 +189,122 @@ Extract business entities from filenames: Clien_CBK, WhiteLabel, Shop, Google, P
 - Identify trends (increasing, decreasing, stable)
 - Note if changes are within acceptable business ranges
 
-OUTPUT REQUIREMENTS:
-- Produce a complete, structured report in the exact format specified
-- Include specific file names, entities, times, and quantified impacts
-- Provide actionable recommendations with clear priorities
-- Consolidate findings to avoid redundancy
-- Focus on business impact and operational implications
+HOW YOUR OUTPUT FEEDS THE FINAL REPORT:
 
-EXAMPLE OUTPUT:
+The final multi-source synthesizer will extract from your report:
+1. **criticality_level** → Determines which section (Urgent/Attention/Normal)
+2. **summary_line** → Becomes the bullet point description
+3. **recommended_action** → Appended as "→ *Action:* [text]"
+
+Final format: • *SourceName (id: XXXXX)* – YYYY-MM-DD: [YOUR SUMMARY LINE] → *Action:* [YOUR ACTION]
+
+Example transformation:
 ```
-# Report for Source ID: 220504, Name: Payments_Layout_1_V3
-Date: 2025-09-08
+Your output:
+- criticality_level: "NEEDS ATTENTION"
+- summary_line: "ClienX volume 61,639 (> usual Monday 40k–55k)"
+- recommended_action: "Confirm coverage/window; monitor next run"
 
-## Issue Summary
-- Critical Issues: 2
-- Warnings: 1
-- Informational: 1
+Becomes in final report:
+* Needs Attention*
+• *Sale_adjustments_3 (id: 239611)* – 2025-09-08: ClienX volume 61,639 (> usual Monday 40k–55k) → *Action:* Confirm coverage/window; monitor next run
+```
 
-## Critical Issues
-- Missing Files: 14 files not received past expected 08:08-08:18 UTC window
-  - Entities affected: Clien_CBK, WhiteLabel, Shop
-  - Files: Payments_Clien_CBK_20250908.csv, Payments_WhiteLabel_20250908.csv, [+12 more]
-  
-- Failed Processing: 2 files failed ingestion due to schema validation
-  - Files: Payments_Shop_20250908.csv, Payments_Google_20250908.csv
+OUTPUT REQUIREMENTS:
+- Produce a complete, structured report in the exact format specified above
+- **CRITICAL**: Your summary_line field is the MOST IMPORTANT - it becomes the visible description in the final report
+- Include specific file names, entities, time windows, and quantified values in summary line
+- Use exact formatting for final report compatibility:
+  - Time windows: "08:08-08:18 UTC"
+  - Record counts: "`[X,XXX] records`" (with backticks and brackets)
+  - Entity lists: "entities: Name1, Name2, Name3..."
+  - Comparisons: "volume X (> usual Y-Z)" or "(>95% bound Z)"
+  - Use em dash "—" (not hyphen) to separate clauses
+- Consolidate findings to avoid redundancy
+- Provide actionable recommendations using EXACT standard templates
+- State criticality level explicitly (exactly one of: "URGENT ACTION REQUIRED", "NEEDS ATTENTION", "NO ACTION NEEDED")
 
-## Warnings
-- Late Delivery: Saipos file arrived 4.2 hours after expected window
-  - Expected: 08:08 UTC, Actual: 12:20 UTC
-  - File: Payments_Saipos_20250908.csv (1,234 records)
+EXAMPLE OUTPUT 1 (URGENT):
+```
+## Source: Payments_Layout_1_V3 (id: 220504)
+**Date**: 2025-09-08
+**Criticality Level**: URGENT ACTION REQUIRED
 
-## Informational  
-- Normal Operations: 8 files processed successfully with expected volumes
-- Total Records Processed: 45,678 (within normal range 40k-55k)
+### Summary Line
+14 files missing past 08:08–08:18 UTC window — entities: Clien_CBK, WhiteLabel, Shop, Google, POC, Market, Innovation, Donation, Beneficios, ApplePay, Anota-ai, AddCard, Clien_payments, ClienX_Clube
 
-## Impact Assessment
-Critical impact on daily reconciliation process due to missing files. 14 missing files represent approximately 60% of expected daily volume for key payment entities. Failed processing files block downstream reporting for Shop and Google payment channels.
+### Detailed Findings
 
-## Recommended Actions
-1. Immediate: Contact data provider to regenerate and resend missing files for Clien_CBK, WhiteLabel, and Shop entities
-2. Short-term: Re-run ingestion pipeline once missing files received; validate schema for failed files
-3. Monitoring: Track Saipos delivery times for pattern; confirm if 12:20 delivery represents schedule change
+**Missing Files**:
+- Count: 14 files missing
+- Time Window: 08:08-08:18 UTC
+- Entities Affected: Clien_CBK, WhiteLabel, Shop, Google, POC, Market, Innovation, Donation, Beneficios, ApplePay, Anota-ai, AddCard, Clien_payments, ClienX_Clube
+- All files follow pattern: [hash]_EntityName_payments_accounting_report_2025_09_08.csv
+
+**Failed/Duplicate Files**:
+- 2 files with status = 'failure' due to schema validation errors
+- Files: [hash]_Shop_payments_20250908.csv, [hash]_Google_payments_20250908.csv
+
+### Recommended Actions
+**Action**: Notify provider to generate/re-send; re-run ingestion and verify completeness
+```
+
+EXAMPLE OUTPUT 2 (NEEDS ATTENTION):
+```
+## Source: Sale_adjustments_3 (id: 239611)
+**Date**: 2025-09-08
+**Criticality Level**: NEEDS ATTENTION
+
+### Summary Line
+ClienX volume 61,639 (> usual Monday 40k–55k)
+
+### Detailed Findings
+
+**Volume Variations**:
+- Entity: ClienX
+- Today's Volume: 61,639 records
+- Expected Range: 40,000-55,000 (usual Monday pattern)
+- Deviation: +23% above upper bound
+
+### Recommended Actions
+**Action**: Confirm coverage/window; monitor next run
+```
+
+EXAMPLE OUTPUT 3 (NO ACTION NEEDED):
+```
+## Source: Sale_payments_2 (id: 228036)
+**Date**: 2025-09-08
+**Criticality Level**: NO ACTION NEEDED
+
+### Summary Line
+`[1,233,496] records`
+
+### Detailed Findings
+All files received and processed successfully. Volumes within expected ranges. No duplicates, failures, or timing issues detected.
+
+### Total Records
+`[1,233,496] records`
 ```
 """
 
 
 class SourceSynthesizerOutputSchema(BaseModel):
-    """Schema for source synthesizer results."""
+    """Schema for source synthesizer results aligned with final report format."""
 
     source_id: str
     source_name: str
     processing_date: str
-    critical_issues_count: int
-    warnings_count: int
-    informational_count: int
-    critical_issues: list[str]
-    warnings: list[str]
-    informational: list[str]
-    impact_assessment: str
-    recommended_actions: list[str]
-    full_report: str
+    criticality_level: str  # "URGENT ACTION REQUIRED" | "NEEDS ATTENTION" | "NO ACTION NEEDED"
+    summary_line: str  # One-line summary for final report
+    missing_files_details: str  # Details about missing files (if any)
+    failed_duplicate_details: str  # Details about failures/duplicates (if any)
+    volume_variation_details: str  # Details about volume issues (if any)
+    late_early_upload_details: str  # Details about timing issues (if any)
+    empty_file_details: str  # Details about empty files (if any)
+    previous_period_details: str  # Details about previous period files (if any)
+    total_records: str  # Total records if normal operations (e.g., "[1,233,496] records")
+    recommended_action: str  # Recommended action (empty if NO ACTION NEEDED)
+    full_report: str  # Complete formatted report
 
 
 def create_source_synthesizer_agent(
