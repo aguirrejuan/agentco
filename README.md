@@ -2,6 +2,8 @@
 
 ![system_overview](./assets/agentco.png)
 
+![system_agents](./assets/agents-sys.png)
+
 A data quality analysis agent that automatically detects issues in data ingestion pipelines and generates executive reports.
 
 ## Overview
